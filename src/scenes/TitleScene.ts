@@ -1,6 +1,6 @@
+import Phaser from 'phaser';
 import { BaseScene } from '@/scenes/BaseScene';
 import { THEME } from '@/config/theme';
-import { GAME_HEIGHT, GAME_WIDTH } from '@/config/resolution';
 
 export class TitleScene extends BaseScene {
   constructor() {
@@ -10,12 +10,15 @@ export class TitleScene extends BaseScene {
   create(): void {
     this.cameras.main.setBackgroundColor(THEME.background);
 
+    const { centerX } = this.safeZoneX;
+    const centerY = this.scale.height / 2;
+
     this.add
-      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 20, 200, 60, THEME.accentAmber)
+      .rectangle(centerX, centerY - 20, 200, 60, THEME.accentAmber)
       .setStrokeStyle(2, THEME.panel);
 
     this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 20, 'WILDCORE', {
+      .text(centerX, centerY - 20, 'WILDCORE', {
         fontFamily: 'monospace',
         fontSize: '16px',
         color: THEME.textCream,
@@ -23,7 +26,7 @@ export class TitleScene extends BaseScene {
       .setOrigin(0.5);
 
     const prompt = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 50, 'TAP TO START', {
+      .text(centerX, centerY + 50, 'TAP TO START', {
         fontFamily: 'monospace',
         fontSize: '10px',
         color: THEME.textCream,
@@ -38,8 +41,16 @@ export class TitleScene extends BaseScene {
       repeat: -1,
     });
 
-    this.input.once('pointerdown', () => {
+    // currentlyOver lets a tap on the pause button (or any future UI)
+    // absorb the tap instead of also triggering the scene transition.
+    const handleTap = (
+      _pointer: Phaser.Input.Pointer,
+      currentlyOver: Phaser.GameObjects.GameObject[],
+    ): void => {
+      if (currentlyOver.length > 0) return;
+      this.input.off('pointerdown', handleTap);
       this.scene.start('StageSelect');
-    });
+    };
+    this.input.on('pointerdown', handleTap);
   }
 }

@@ -1,6 +1,6 @@
+import Phaser from 'phaser';
 import { BaseScene } from '@/scenes/BaseScene';
 import { THEME } from '@/config/theme';
-import { GAME_HEIGHT, GAME_WIDTH } from '@/config/resolution';
 
 export class StageSelectScene extends BaseScene {
   constructor() {
@@ -10,12 +10,13 @@ export class StageSelectScene extends BaseScene {
   create(): void {
     this.cameras.main.setBackgroundColor(THEME.background);
 
-    this.add
-      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 260, 120, THEME.accentTeal)
-      .setStrokeStyle(2, THEME.panel);
+    const { centerX } = this.safeZoneX;
+    const centerY = this.scale.height / 2;
+
+    this.add.rectangle(centerX, centerY, 260, 120, THEME.accentTeal).setStrokeStyle(2, THEME.panel);
 
     this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 12, 'STAGE SELECT', {
+      .text(centerX, centerY - 12, 'STAGE SELECT', {
         fontFamily: 'monospace',
         fontSize: '12px',
         color: THEME.textCream,
@@ -23,15 +24,23 @@ export class StageSelectScene extends BaseScene {
       .setOrigin(0.5);
 
     this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 8, '(stub - tap to enter a stage)', {
+      .text(centerX, centerY + 8, '(stub - tap to enter a stage)', {
         fontFamily: 'monospace',
         fontSize: '8px',
         color: THEME.textCream,
       })
       .setOrigin(0.5);
 
-    this.input.once('pointerdown', () => {
+    // currentlyOver lets a tap on the pause button (or any future UI)
+    // absorb the tap instead of also triggering the scene transition.
+    const handleTap = (
+      _pointer: Phaser.Input.Pointer,
+      currentlyOver: Phaser.GameObjects.GameObject[],
+    ): void => {
+      if (currentlyOver.length > 0) return;
+      this.input.off('pointerdown', handleTap);
       this.scene.start('Stage');
-    });
+    };
+    this.input.on('pointerdown', handleTap);
   }
 }

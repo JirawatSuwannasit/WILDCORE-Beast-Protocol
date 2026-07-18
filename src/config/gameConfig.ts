@@ -1,17 +1,25 @@
 import Phaser from 'phaser';
-import { buildScaleConfig, GAME_HEIGHT, GAME_WIDTH } from '@/config/resolution';
+import { computeRenderWidth, GAME_HEIGHT } from '@/config/resolution';
 import { BootScene } from '@/scenes/BootScene';
 import { TitleScene } from '@/scenes/TitleScene';
 import { StageSelectScene } from '@/scenes/StageSelectScene';
 import { StageScene } from '@/scenes/StageScene';
 import { THEME } from '@/config/theme';
 
+function buildScaleConfig(): Phaser.Types.Core.ScaleConfig {
+  return {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+    width: computeRenderWidth(window.innerWidth, window.innerHeight),
+    height: GAME_HEIGHT,
+    zoom: Phaser.Scale.MAX_ZOOM,
+  };
+}
+
 export function buildGameConfig(): Phaser.Types.Core.GameConfig {
   return {
     type: Phaser.AUTO,
     parent: 'app',
-    width: GAME_WIDTH,
-    height: GAME_HEIGHT,
     backgroundColor: THEME.background,
     pixelArt: true,
     antialias: false,
