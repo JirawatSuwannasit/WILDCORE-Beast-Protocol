@@ -1,0 +1,516 @@
+{
+  "type": "map",
+  "orientation": "orthogonal",
+  "renderorder": "right-down",
+  "compressionlevel": -1,
+  "width": 120,
+  "height": 12,
+  "tilewidth": 16,
+  "tileheight": 16,
+  "infinite": false,
+  "nextlayerid": 6,
+  "nextobjectid": 22,
+  "tilesets": [
+    {
+      "firstgid": 1,
+      "name": "speedway-placeholder",
+      "image": "speedway-placeholder.png",
+      "imagewidth": 32,
+      "imageheight": 16,
+      "tilewidth": 16,
+      "tileheight": 16,
+      "tilecount": 2,
+      "columns": 2,
+      "margin": 0,
+      "spacing": 0
+    }
+  ],
+  "layers": [
+    {
+      "id": 1,
+      "type": "tilelayer",
+      "name": "ground",
+      "width": 120,
+      "height": 12,
+      "x": 0,
+      "y": 0,
+      "visible": true,
+      "opacity": 1,
+      "data": [
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 2, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+        0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 2, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 2, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2
+      ]
+    },
+    {
+      "id": 2,
+      "type": "objectgroup",
+      "name": "checkpoints",
+      "objects": [
+        {
+          "id": 1,
+          "type": "checkpoint",
+          "name": "checkpoint-start",
+          "x": 16,
+          "y": 128,
+          "width": 16,
+          "height": 16,
+          "visible": true,
+          "properties": [
+            {
+              "name": "order",
+              "type": "int",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "type": "checkpoint",
+          "name": "checkpoint-midpoint",
+          "x": 608,
+          "y": 128,
+          "width": 16,
+          "height": 16,
+          "visible": true,
+          "properties": [
+            {
+              "name": "order",
+              "type": "int",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "type": "checkpoint",
+          "name": "checkpoint-preboss",
+          "x": 1456,
+          "y": 128,
+          "width": 16,
+          "height": 16,
+          "visible": true,
+          "properties": [
+            {
+              "name": "order",
+              "type": "int",
+              "value": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "objectgroup",
+      "name": "hazards",
+      "objects": [
+        {
+          "id": 5,
+          "type": "speedStrip",
+          "name": "speedStrip",
+          "x": 224,
+          "y": 144,
+          "width": 48,
+          "height": 16,
+          "visible": true,
+          "properties": []
+        },
+        {
+          "id": 6,
+          "type": "speedStrip",
+          "name": "speedStrip",
+          "x": 320,
+          "y": 144,
+          "width": 48,
+          "height": 16,
+          "visible": true,
+          "properties": []
+        },
+        {
+          "id": 7,
+          "type": "spikes",
+          "name": "spikes-pre-bridge",
+          "x": 416,
+          "y": 144,
+          "width": 32,
+          "height": 16,
+          "visible": true,
+          "properties": []
+        },
+        {
+          "id": 8,
+          "type": "collapsingBridge",
+          "name": "bridge-0",
+          "x": 448,
+          "y": 160,
+          "width": 48,
+          "height": 16,
+          "visible": true,
+          "properties": []
+        },
+        {
+          "id": 9,
+          "type": "collapsingBridge",
+          "name": "bridge-1",
+          "x": 512,
+          "y": 160,
+          "width": 48,
+          "height": 16,
+          "visible": true,
+          "properties": []
+        },
+        {
+          "id": 10,
+          "type": "electricFence",
+          "name": "electricFence",
+          "x": 704,
+          "y": 112,
+          "width": 16,
+          "height": 48,
+          "visible": true,
+          "properties": []
+        },
+        {
+          "id": 11,
+          "type": "electricFence",
+          "name": "electricFence",
+          "x": 784,
+          "y": 112,
+          "width": 16,
+          "height": 48,
+          "visible": true,
+          "properties": []
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "objectgroup",
+      "name": "entities",
+      "objects": [
+        {
+          "id": 4,
+          "type": "playerSpawn",
+          "name": "playerSpawn",
+          "x": 16,
+          "y": 128,
+          "width": 16,
+          "height": 16,
+          "visible": true,
+          "properties": []
+        },
+        {
+          "id": 12,
+          "type": "sparkBug",
+          "name": "sparkBug-intro",
+          "x": 144,
+          "y": 144,
+          "width": 16,
+          "height": 16,
+          "visible": true,
+          "properties": []
+        },
+        {
+          "id": 13,
+          "type": "patrolDrone",
+          "name": "patrolDrone-strip",
+          "x": 288,
+          "y": 80,
+          "width": 16,
+          "height": 16,
+          "visible": true,
+          "properties": [
+            {
+              "name": "patrolRangeX",
+              "type": "int",
+              "value": 48
+            }
+          ]
+        },
+        {
+          "id": 14,
+          "type": "turretSunflower",
+          "name": "turretSunflower-fence",
+          "x": 832,
+          "y": 144,
+          "width": 16,
+          "height": 16,
+          "visible": true,
+          "properties": []
+        },
+        {
+          "id": 15,
+          "type": "patrolDrone",
+          "name": "patrolDrone-orbitA",
+          "x": 1024,
+          "y": 64,
+          "width": 16,
+          "height": 16,
+          "visible": true,
+          "properties": [
+            {
+              "name": "orbitPylon",
+              "type": "bool",
+              "value": true
+            },
+            {
+              "name": "orbitAngleOffsetDeg",
+              "type": "int",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": 16,
+          "type": "patrolDrone",
+          "name": "patrolDrone-orbitB",
+          "x": 1024,
+          "y": 64,
+          "width": 16,
+          "height": 16,
+          "visible": true,
+          "properties": [
+            {
+              "name": "orbitPylon",
+              "type": "bool",
+              "value": true
+            },
+            {
+              "name": "orbitAngleOffsetDeg",
+              "type": "int",
+              "value": 180
+            }
+          ]
+        },
+        {
+          "id": 17,
+          "type": "pylon",
+          "name": "midBossPylon",
+          "x": 1024,
+          "y": 112,
+          "width": 16,
+          "height": 48,
+          "visible": true,
+          "properties": []
+        },
+        {
+          "id": 18,
+          "type": "legsCapsule",
+          "name": "legsCapsule",
+          "x": 1328,
+          "y": 0,
+          "width": 16,
+          "height": 16,
+          "visible": true,
+          "properties": []
+        },
+        {
+          "id": 19,
+          "type": "bossDoor",
+          "name": "bossDoor",
+          "x": 1616,
+          "y": 32,
+          "width": 16,
+          "height": 128,
+          "visible": true,
+          "properties": []
+        },
+        {
+          "id": 20,
+          "type": "bossSpawn",
+          "name": "volt-cheetah-spawn",
+          "x": 1840,
+          "y": 128,
+          "width": 16,
+          "height": 16,
+          "visible": true,
+          "properties": []
+        },
+        {
+          "id": 21,
+          "type": "bossRoomTrigger",
+          "name": "bossRoomTrigger",
+          "x": 1600,
+          "y": 0,
+          "width": 32,
+          "height": 192,
+          "visible": true,
+          "properties": []
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "objectgroup",
+      "name": "sections",
+      "objects": [
+        {
+          "id": 22,
+          "type": "section",
+          "name": "intro",
+          "x": 0,
+          "y": 0,
+          "width": 192,
+          "height": 192,
+          "visible": true,
+          "properties": []
+        },
+        {
+          "id": 23,
+          "type": "section",
+          "name": "speedStrip",
+          "x": 192,
+          "y": 0,
+          "width": 256,
+          "height": 192,
+          "visible": true,
+          "properties": []
+        },
+        {
+          "id": 24,
+          "type": "section",
+          "name": "bridgeGap",
+          "x": 448,
+          "y": 0,
+          "width": 160,
+          "height": 192,
+          "visible": true,
+          "properties": []
+        },
+        {
+          "id": 25,
+          "type": "section",
+          "name": "afterBridge",
+          "x": 608,
+          "y": 0,
+          "width": 32,
+          "height": 192,
+          "visible": true,
+          "properties": []
+        },
+        {
+          "id": 26,
+          "type": "section",
+          "name": "fence",
+          "x": 640,
+          "y": 0,
+          "width": 224,
+          "height": 192,
+          "visible": true,
+          "properties": []
+        },
+        {
+          "id": 27,
+          "type": "section",
+          "name": "midBoss",
+          "x": 864,
+          "y": 0,
+          "width": 320,
+          "height": 192,
+          "visible": true,
+          "properties": []
+        },
+        {
+          "id": 28,
+          "type": "section",
+          "name": "wallKickApproach",
+          "x": 1184,
+          "y": 0,
+          "width": 96,
+          "height": 192,
+          "visible": true,
+          "properties": []
+        },
+        {
+          "id": 29,
+          "type": "section",
+          "name": "wallKickShaft",
+          "x": 1280,
+          "y": 0,
+          "width": 96,
+          "height": 192,
+          "visible": true,
+          "properties": []
+        },
+        {
+          "id": 30,
+          "type": "section",
+          "name": "wallKickExit",
+          "x": 1376,
+          "y": 0,
+          "width": 64,
+          "height": 192,
+          "visible": true,
+          "properties": []
+        },
+        {
+          "id": 31,
+          "type": "section",
+          "name": "preBoss",
+          "x": 1440,
+          "y": 0,
+          "width": 160,
+          "height": 192,
+          "visible": true,
+          "properties": []
+        },
+        {
+          "id": 32,
+          "type": "section",
+          "name": "bossRoom",
+          "x": 1600,
+          "y": 0,
+          "width": 320,
+          "height": 192,
+          "visible": true,
+          "properties": []
+        }
+      ]
+    }
+  ]
+}

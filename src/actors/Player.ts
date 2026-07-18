@@ -46,6 +46,8 @@ export class Player extends InterpolatedPhysicsSprite {
   private invulnFramesRemaining = 0;
   private hitstunFramesRemaining = 0;
   private hp: number;
+  private readonly maxHp: number;
+  private speedMultiplier = 1;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     const { width, height } = playerTuning.size;
@@ -56,7 +58,8 @@ export class Player extends InterpolatedPhysicsSprite {
       getRectTexture(scene, 'player-placeholder', width, height, THEME.accentAmber),
     );
 
-    this.hp = 16; // GDD §2.3: 16-unit HP bar, base kit (no Heart Chips yet)
+    this.maxHp = 16; // GDD §2.3: 16-unit HP bar, base kit (no Heart Chips yet)
+    this.hp = this.maxHp;
 
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setSize(width, height);
@@ -179,7 +182,7 @@ export class Player extends InterpolatedPhysicsSprite {
     if (this.wallKickLockFrames > 0) {
       this.wallKickLockFrames -= 1;
     } else if (this.dashFramesRemaining <= 0) {
-      body.setVelocityX(input.moveX * playerTuning.run.speed);
+      body.setVelocityX(input.moveX * playerTuning.run.speed * this.speedMultiplier);
     }
 
     if (input.moveX !== 0) {
@@ -207,6 +210,16 @@ export class Player extends InterpolatedPhysicsSprite {
     this.updateFlicker();
   }
 
+  /** Scales horizontal run speed for the current step (GDD §3b speed strips); expires unless reapplied every frame. */
+  applySpeedMultiplier(multiplier: number): void {
+    this.speedMultiplier = multiplier;
+  }
+
+  /** Bypasses invulnerability entirely (GDD §3b hazard matrix: spikes are always lethal). */
+  instaKill(): void {
+    this.hp = 0;
+  }
+
   takeDamage(amount: number, sourceX: number): void {
     if (this.isInvulnerable) return;
 
@@ -229,6 +242,7 @@ export class Player extends InterpolatedPhysicsSprite {
     this.snapVisualTo(body.center.x, body.center.y);
     this.hitstunFramesRemaining = 0;
     this.invulnFramesRemaining = 0;
+    this.hp = this.maxHp;
     this.visual.setVisible(true);
   }
 
