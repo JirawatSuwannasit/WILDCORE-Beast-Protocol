@@ -3,7 +3,7 @@ import { computeRenderWidth, GAME_HEIGHT } from '@/config/resolution';
 import { BootScene } from '@/scenes/BootScene';
 import { TitleScene } from '@/scenes/TitleScene';
 import { StageSelectScene } from '@/scenes/StageSelectScene';
-import { StageScene } from '@/scenes/StageScene';
+import { GymScene } from '@/scenes/GymScene';
 import { THEME } from '@/config/theme';
 
 function buildScaleConfig(): Phaser.Types.Core.ScaleConfig {
@@ -37,6 +37,12 @@ export function buildGameConfig(): Phaser.Types.Core.GameConfig {
       target: 60,
       min: 30,
     },
-    scene: [BootScene, TitleScene, StageSelectScene, StageScene],
+    input: {
+      // >=4 simultaneous touches: move + jump + shoot(hold-to-charge) +
+      // dash all at once (GDD §2.2b: "multi-touch safe").
+      activePointers: 4,
+      gamepad: true,
+    },
+    scene: [BootScene, TitleScene, StageSelectScene, GymScene],
   };
 }

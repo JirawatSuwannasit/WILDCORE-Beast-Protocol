@@ -10,4 +10,6 @@ export const THEME = {
   accentCoral: 0xe8604c,
   accentTeal: 0x5fb3a1,
   textCream: '#f2e8d5',
+  textCreamHex: 0xf2e8d5,
+  moss: 0x7ba05b,
 } as const;
