@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">WILDCORE</string>
+    <string name="title_activity_main">WILDCORE</string>
+    <string name="package_name">com.wildcore.beastprotocol</string>
+    <string name="custom_url_scheme">com.wildcore.beastprotocol</string>
+</resources>

@@ -1,0 +1,5 @@
+dist
+android
+node_modules
+coverage
+*.md
