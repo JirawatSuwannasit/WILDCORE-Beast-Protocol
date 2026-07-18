@@ -24,7 +24,7 @@ export class StageSelectScene extends BaseScene {
       .setOrigin(0.5);
 
     this.add
-      .text(centerX, centerY + 8, '(stub - tap to enter a stage)', {
+      .text(centerX, centerY + 8, '(stub - tap to enter the player gym)', {
         fontFamily: 'monospace',
         fontSize: '8px',
         color: THEME.textCream,
@@ -39,7 +39,7 @@ export class StageSelectScene extends BaseScene {
     ): void => {
       if (currentlyOver.length > 0) return;
       this.input.off('pointerdown', handleTap);
-      this.scene.start('Stage');
+      this.scene.start('Gym');
     };
     this.input.on('pointerdown', handleTap);
   }

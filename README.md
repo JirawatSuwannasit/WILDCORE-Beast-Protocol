@@ -56,18 +56,28 @@ Run.
 ```
 src/
 ├─ main.ts, config/        # Phaser game config, tuning values, touch layout
-├─ scenes/                 # Boot -> Title -> StageSelect -> Stage
-├─ actors/                 # Player, enemies, bosses, projectiles
-├─ systems/                # input, checkpoint, save, weapons, capsules, audio, vfx, lifecycle
-└─ data/                   # stage/boss JSON, weakness wheel
+├─ scenes/                 # Boot -> Title -> StageSelect -> Gym (test room; Stage lands in M2)
+├─ actors/                 # Player, projectiles, target dummy, moving platform
+├─ systems/                # input (+ inputSources/), physics helpers, lifecycle, debug overlay
+└─ data/                   # stage/boss JSON, weakness wheel (from M2 onward)
 android/                   # Capacitor Android project (generated; do not hand-edit build/ output)
 capacitor.config.ts
 ```
 
-## Notes for the current milestone (M0)
+## Notes for the current milestone (M1)
 
-- Landscape orientation is locked natively (`AndroidManifest.xml`); immersive fullscreen and
-  safe-area insets are handled in `MainActivity.java` + `src/systems/statusBar.ts`.
-- The app auto-pauses the game loop and audio when backgrounded (`src/systems/lifecycle.ts`),
-  including on incoming calls, via the Capacitor `App` plugin.
-- Scenes are placeholder colored rectangles per the GDD's "no final art until told" rule.
+- The Player controller (`src/actors/Player.ts`) is playable in the **Gym** scene: Title -> tap ->
+  Stage Select -> tap -> Gym. Run, variable-height jump, wall-slide/wall-kick, coyote time + input
+  buffer, hurtbox/knockback/invulnerability, and the buster (hold-to-charge, pooled projectiles)
+  are all live. Dash is present but inert (a config flag away from being enabled in M6).
+- Touch is the primary input (`src/systems/inputSources/`): a floating stick or fixed D-pad (left
+  thumb) plus Jump/Shoot/Dash buttons and weapon-swap arrows (right thumb), all >=48dp regardless
+  of device zoom. The same input abstraction also serves a keyboard (dev preview: arrows/AD move,
+  Z/Space jump, X shoot, C/Shift dash, Q/E swap) and a Bluetooth gamepad.
+- Debug overlay: press **F3** (or tap with three fingers at once) to show hitboxes, current state,
+  velocity, and coyote/buffer indicators.
+- All player feel tuning lives in `src/config/playerTuning.ts`; all touch layout lives in
+  `src/config/touchLayout.ts` — the PO can retune either without touching code.
+- See `DECISIONS.md` for the physics/render-interpolation architecture and a couple of real bugs
+  found and fixed while building the Gym (a soft-locking wall-kick shaft, a projectile despawn bug
+  that made the buster do nothing once the camera scrolled).

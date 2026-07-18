@@ -3,6 +3,117 @@
 Running log of deviations from `docs/GDD.md`, and judgment calls made where a requirement was
 ambiguous. One entry per decision, newest first.
 
+## M1 — Player Controller + Touch Input
+
+- **Two parallel fixed-step clocks, on purpose.** Arcade Physics already runs its own internal
+  fixed-60Hz accumulator when `physics.arcade.fps: 60` is set (confirmed by reading
+  `node_modules/phaser/src/physics/arcade/World.js` - it's the same "accumulate delta, step while
+  >= frame time" pattern as `FixedTimestepAccumulator`). Rather than fight Phaser to route physics
+  through my own accumulator, `Player.fixedUpdate` (driven by `BaseScene`'s accumulator, per M0)
+  sets velocity/state each fixed step and lets Arcade's own stepping integrate position. Because
+  both accumulators consume the exact same per-frame `delta` and use the same threshold, they step
+  the same number of times per render frame - no drift between the two. The one real cost: physics
+  steps in Phaser's `UPDATE` phase, before `BaseScene.update()` (my `fixedUpdate`) runs, so a
+  velocity change decided this step is only applied on the *next* physics step - a constant ~1
+  fixed-frame (16.7ms) of extra input latency, deemed acceptable (well under human reaction-time
+  thresholds) versus the risk of hand-rolling manual Arcade World stepping.
+
+- **P1-class bug found while wiring render interpolation for the player: `InterpolatedPhysicsSprite`.**
+  The naive plan (write `renderAlpha`-interpolated positions straight onto the physics sprite each
+  render frame, like M0's non-physics "pacer" demo) is unsound for a real Arcade body:
+  `Body.preUpdate()` calls `updateFromGameObject()` **every render frame, unconditionally** - it
+  re-reads the GameObject's x/y as the new authoritative simulation position, before deciding
+  whether a step happens. Writing an interpolated (non-integer-step) position to the physics
+  sprite would get read back in as real simulation state on the very next frame, corrupting
+  position tracking. Fixed with `src/actors/InterpolatedPhysicsSprite.ts`: the physics-driving
+  sprite (`Player`, `MovingPlatform`) stays invisible and only drives collision; a separate
+  plain `visual` sprite (no body, so no feedback path) is what's actually rendered, positioned via
+  `PositionInterpolator` each frame. `TargetDummy` doesn't need this - it never moves.
+
+- **Gravity / tile size / derived jump velocities.** The GDD gives jump height in tiles (min 2,
+  max 3.5) but not a tile size or gravity value. Set `TILE_SIZE = 16` (matches the GDD's own 16x16
+  tileset spec, §10.5) and `gravity = 900px/s²` (chosen for a ~21-frame rise to apex on a max
+  jump - a snappy, Mega-Man-scaled arc). `computeJumpVelocities()` derives the launch/cut
+  velocities from those so the *tunable* surface for the PO stays the height-in-tiles values in
+  `playerTuning.ts`, not raw velocities.
+
+- **Wall-kick shaft found to be a soft-lock, not an optional test feature - fixed.** As first
+  built, the wall-kick shaft's walls ran floor-to-ceiling directly across the main ground path,
+  with no way around at ground level and no way past without successfully chaining wall-kicks to
+  the top. Caught this by scripting a bot to just walk right through the gym without climbing it -
+  it got stuck. A real player who can't execute the kick chain would be stuck too, which fails the
+  "fast retry" pillar hard. Repositioned the shaft above the stairs' top platform (walls stop at
+  the stairs' height, not `GROUND_TOP`) so it's now a genuine optional detour: the main ground path
+  is unobstructed underneath for anyone who skips it, and it's still fully climbable/testable via
+  wall-kicks for anyone who takes it.
+
+- **Buster projectile despawn bug found and fixed.** Projectiles originally deactivated when
+  `this.x` (world position) exceeded `scene.scale.width` (the ~320-420px logical *viewport*
+  width) - correct for a single-screen scene, wrong for the Gym's ~1400px scrollable level: once
+  the camera scrolled past the first screen, every shot fired anywhere in the level was instantly
+  treated as "off-screen" and despawned, so the buster appeared to do nothing against the target
+  dummy. Found via a direct-state Playwright check (shots showed `active:false` immediately after
+  firing, far from the pool being exhausted). Fixed with a flight-time-based despawn
+  (`playerTuning.buster.maxFlightMs`) instead of a position/viewport check - correct regardless of
+  world size, and the more standard pattern for pooled projectiles anyway.
+
+- **Knockback and hitstun numbers.** "4px hop away from damage source" is implemented as a literal
+  4px instant repositioning (via `body.reset`, not a velocity impulse - guarantees an exact,
+  deterministic 4px regardless of frame rate) plus a small upward velocity so it visually reads as
+  a hop. Added a `hitstunFrames` (10) lockout during which the player can't act, distinct from the
+  GDD's boss-weakness *hitstop* (freeze-frame, an M8 polish-pass item per the M8 prompt, not built
+  here) - hitstun is "you got hit and briefly can't cancel it," which the GDD's knockback line
+  implies but doesn't name a duration for.
+
+- **Manual pause vs. physics.** `BaseScene`'s manual-pause flag (M0) only ever skipped
+  `fixedUpdate`; it never needed to touch Arcade's own stepping. Confirmed still correct with real
+  physics bodies in the mix - Arcade World simply doesn't get new velocity commands while paused
+  and nothing drifts, since nothing this scene mutates positions outside `fixedUpdate`.
+
+- **48dp touch targets on a variable-zoom canvas.** "dp" (density-independent px) is equivalent to
+  CSS px, but our logical canvas is scaled to the screen by an integer zoom that's computed per
+  device (M0). A touch button authored as a fixed *logical* px size could measure well under 48
+  CSS px on a high-density/low-zoom device. `src/systems/touchScale.ts` converts
+  `dp -> logical px` via `scene.scale.displayScale.x` (logical-px-per-CSS-px) at construction
+  time, so buttons are guaranteed >=48 CSS px on any device regardless of the zoom Phaser picked.
+
+- **Hold-B auto-fire, literally.** Read the GDD's "Hold-B auto-fire toggle... for players who
+  dislike tap-mashing" (§2.2b) as: holding Shoot repeatedly fires uncharged shots at a fixed
+  interval instead of charging - an alternate firing mode traded off against the charge mechanic,
+  not an addition to it. Wired as `touchLayout.autoFire.enabledDefault` (off by default, matching
+  hold-to-charge as the primary/expected behavior); a real settings-menu toggle is M5 scope.
+
+- **Floating stick vs. fixed D-pad: both fully built, switched at build time.** The GDD asks for
+  "player choice" but there's no settings menu yet to offer that choice at runtime (M5). Both
+  `FloatingStick` and `FixedDpad` are complete, functional implementations behind
+  `touchLayout.stickMode`; wiring an in-game toggle is pure plumbing once M5's settings UI exists,
+  not a redesign.
+
+- **Debug overlay's "touch zones" requirement.** Not drawn as a separate overlay layer - the
+  on-screen buttons/stick are already rendered as translucent shapes at their exact interactive
+  bounds at all times (not just in debug mode), so they already are their own zone visualization.
+  Adding a redundant outline layer under F3 would just duplicate what's already always visible.
+
+- **Scene rename: `Stage` -> `Gym`.** M0's `StageScene` (a bouncing-rectangle demo of the
+  fixed-timestep/interpolation wiring) is deleted; its sole purpose is now demonstrated for real by
+  the Player controller in the new `GymScene`. `StageSelectScene` now routes to `Gym`. `Stage` is
+  reserved for M2's real first level (Speedway Savanna) so the naming doesn't collide later.
+
+- **Real device / environment limits on what could be verified here.** No Android SDK in this
+  sandbox (same limitation as M0/M0-fix) - couldn't build or install the actual debug APK; CI will
+  produce it. Extensively playtested the web build headlessly (movement, variable jump height,
+  coyote/buffer, wall-slide, wall-kick, all three gap sizes, stairs, spikes, the moving platform
+  and its fall-through/respawn safety net, buster charging and damage against the target dummy,
+  the floating stick via mouse-drag, and manual pause) with zero console errors throughout.
+  Genuine **true multi-touch (3+ simultaneous physical touches, and the three-finger debug-toggle
+  gesture) could not be exercised** in this headless environment - Chromium's synthetic
+  `TouchEvent` dispatch didn't register with Phaser's input plugin in testing here, and
+  Playwright's touchscreen API is single-point. The multi-touch *architecture* (per-pointer-id
+  tracking in `TouchButton`/`FloatingStick`, `activePointers: 4` in the game config, the merge
+  logic in `InputManager`) is verified by code review and unit tests, and single-pointer
+  interaction (buttons, drag) is confirmed working end-to-end, but simultaneous multi-finger input
+  and the three-finger gesture specifically need a real-device pass.
+
 ## M0 — Project Bootstrap
 
 - **P1 fix: letterbox-extended backgrounds, for real this time.** The original M0 PR deferred
