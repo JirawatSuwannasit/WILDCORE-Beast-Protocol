@@ -50,62 +50,56 @@ export class TouchInputSource implements InputSource {
   private readonly weaponNext: TouchButton;
 
   constructor(scene: Phaser.Scene, zone: TouchInputZone) {
-    const bottom = zone.worldHeight - dpToLogicalPx(scene, 4);
+    const width = zone.safeRight - zone.safeLeft;
+    const height = zone.worldHeight;
+
+    const left = touchLayout.leftCluster;
+    const leftAnchorX = zone.safeLeft + width * left.anchorFromLeftPct;
+    const leftAnchorY = height - height * left.anchorFromBottomPct;
+
+    const right = touchLayout.rightCluster;
+    const rightAnchorX = zone.safeRight - width * right.anchorFromRightPct;
+    const rightAnchorY = height - height * right.anchorFromBottomPct;
 
     if (touchLayout.stickMode === 'floating') {
+      const zoneDiameter = dpToLogicalPx(scene, left.zoneDiameterDp);
       this.stick = new FloatingStick(scene, {
-        x: zone.safeLeft,
-        y: zone.worldHeight * 0.35,
-        width: (zone.safeRight - zone.safeLeft) * 0.5,
-        height: zone.worldHeight * 0.65,
+        x: leftAnchorX - zoneDiameter / 2,
+        y: leftAnchorY - zoneDiameter / 2,
+        width: zoneDiameter,
+        height: zoneDiameter,
       });
     } else {
-      this.dpad = new FixedDpad(
-        scene,
-        zone.safeLeft + dpToLogicalPx(scene, touchLayout.fixedDpad.anchorFromLeftDp),
-        bottom - dpToLogicalPx(scene, touchLayout.fixedDpad.anchorFromBottomDp),
-      );
+      this.dpad = new FixedDpad(scene, leftAnchorX, leftAnchorY);
     }
 
+    const offset = (dp: { offsetXDp: number; offsetYDp: number }): [number, number] => [
+      rightAnchorX - dpToLogicalPx(scene, dp.offsetXDp),
+      rightAnchorY - dpToLogicalPx(scene, dp.offsetYDp),
+    ];
+
     const btn = touchLayout.buttons;
-    this.jump = makeRoundButton(
-      scene,
-      zone.safeRight - dpToLogicalPx(scene, btn.jump.fromRightDp),
-      bottom - dpToLogicalPx(scene, btn.jump.fromBottomDp),
-      btn.diameterDp,
-      'A',
-      THEME.accentAmber,
-    );
+    this.jump = makeRoundButton(scene, ...offset(btn.jump), btn.diameterDp, 'A', THEME.accentAmber);
     this.shoot = makeRoundButton(
       scene,
-      zone.safeRight - dpToLogicalPx(scene, btn.shoot.fromRightDp),
-      bottom - dpToLogicalPx(scene, btn.shoot.fromBottomDp),
+      ...offset(btn.shoot),
       btn.diameterDp,
       'B',
       THEME.accentCoral,
     );
-    this.dash = makeRoundButton(
-      scene,
-      zone.safeRight - dpToLogicalPx(scene, btn.dash.fromRightDp),
-      bottom - dpToLogicalPx(scene, btn.dash.fromBottomDp),
-      btn.diameterDp,
-      'C',
-      THEME.accentTeal,
-    );
+    this.dash = makeRoundButton(scene, ...offset(btn.dash), btn.diameterDp, 'C', THEME.accentTeal);
 
     const swap = touchLayout.weaponSwap;
     this.weaponPrev = makeRoundButton(
       scene,
-      zone.safeRight - dpToLogicalPx(scene, swap.prev.fromRightDp),
-      bottom - dpToLogicalPx(scene, swap.prev.fromBottomDp),
+      ...offset(swap.prev),
       swap.diameterDp,
       '<',
       THEME.panel,
     );
     this.weaponNext = makeRoundButton(
       scene,
-      zone.safeRight - dpToLogicalPx(scene, swap.next.fromRightDp),
-      bottom - dpToLogicalPx(scene, swap.next.fromBottomDp),
+      ...offset(swap.next),
       swap.diameterDp,
       '>',
       THEME.panel,

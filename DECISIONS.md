@@ -5,6 +5,27 @@ ambiguous. One entry per decision, newest first.
 
 ## M1 — Player Controller + Touch Input
 
+- **Touch cluster repositioning (post-merge tuning, real-device feedback).** The original layout
+  anchored the right button cluster (A/B/C + weapon-swap) and the fixed-D-pad mode a small fixed
+  dp offset from the screen edges (e.g. Jump at 44dp from the right, 40dp from the bottom) - on a
+  real phone this landed in the physical corner, causing thumb strain. Reworked both clusters to
+  anchor from a percentage of the play area's width/height instead of fixed dp
+  (`touchLayout.leftCluster` / `rightCluster`, ~13.5% in from the side edge, ~32.5% up from the
+  bottom - within the requested 12-15%/30-35% range), computed against the actual rendered canvas
+  width (`this.scale.width`, which already varies 320-420px with device aspect per the M0
+  extend-background fix) rather than the narrower fixed-320px gameplay-critical frame - a thumb
+  reaches based on where the physical screen edges are, not an abstract inner frame. The
+  within-cluster arrangement (A/B/C triangle spacing, weapon-swap arrow positions, button
+  diameters) is unchanged - each button is still a fixed dp offset, just now measured from the
+  cluster's new percentage-anchored reference point instead of from the raw screen edge, so
+  relative ergonomics inside a cluster are preserved while the cluster as a whole moved inward.
+  Verified visually at 16:9, the S25's 19.5:9, and 21:9 - both clusters land at a consistent,
+  comfortable inset at every ratio instead of drifting toward the corner as the canvas widens.
+  Safe-area-inset handling needed no new code: `index.html`'s `env(safe-area-inset-*)` padding on
+  the `#app` container (M0) already keeps the entire canvas off the notch/gesture bar before any
+  in-game coordinate is computed, so nothing rendered inside the canvas - these clusters included
+  - can ever land under a notch or the gesture bar.
+
 - **Two parallel fixed-step clocks, on purpose.** Arcade Physics already runs its own internal
   fixed-60Hz accumulator when `physics.arcade.fps: 60` is set (confirmed by reading
   `node_modules/phaser/src/physics/arcade/World.js` - it's the same "accumulate delta, step while
