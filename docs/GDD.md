@@ -90,6 +90,27 @@
 
 ---
 
+### 2.6 Stage Length & Structure Standard (Mega Man X scale)
+**Every main stage must meet this standard.** ("Screen" = one native view, 320px ≈ 20 tiles.)
+
+- **Total traversal:** 28–36 screens of path (mixing horizontal + vertical), ≈ 9,000–11,500 px. Vertical shafts count by height.
+- **Target times:** first blind clear 4–6 min (deaths excluded); practiced deathless run 2.5–3.5 min.
+- **Nine-beat structure (X-style):**
+  1. **Intro strip** (2–3 screens) — safe, sells the theme, 1 easy enemy.
+  2. **Gimmick tutorial** (4–5 screens) — stage gimmick in harmless form.
+  3. **Escalation** (4–5 screens) — gimmick + enemies combined.
+  4. **Mid-boss arena** (1 screen) → **checkpoint**.
+  5. **Second gimmick / remix** (5–6 screens) — new variation or second gimmick.
+  6. **Setpiece** (4–6 screens) — the stage's signature moment: chase, minecart, vertical shaft, lights-out run. → **checkpoint** (this is the §2.4 "extra" checkpoint).
+  7. **Breather + secret branch** (2–3 screens) — pickups; capsule/Heart Chip alcove hangs off here.
+  8. **Final exam** (4–5 screens) — hardest combination of everything taught.
+  9. **Pre-boss corridor** (1–2 screens, energy pickups) → **checkpoint** → boss room.
+- **Density:** one enemy encounter per 1.5–2 screens on average; 8–12 pickups per stage; never two hazard types introduced in the same room.
+- **Checkpoints:** start / post-mid-boss / post-setpiece / pre-boss (4 total on this scale).
+- Main path never requires backtracking; secret branches may.
+
+---
+
 ## 3. The Eight Stages & Guardians
 
 Weakness wheel (each weapon beats the *next* boss in this ring):

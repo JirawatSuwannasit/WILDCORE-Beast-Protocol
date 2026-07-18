@@ -10,9 +10,15 @@ import { TurretSunflower } from '@/actors/enemies/TurretSunflower';
 import { VoltCheetah } from '@/actors/bosses/VoltCheetah';
 import { BossDoor } from '@/actors/BossDoor';
 import { LegsCapsuleStub } from '@/actors/LegsCapsuleStub';
+import { EnergyPickupStub } from '@/actors/EnergyPickupStub';
 
 const ARENA_MARGIN = 24;
-const BOSS_ROOM_FLOOR_Y = 128; // matches every other ground-level spawn point in this map
+const BOSS_ROOM_FLOOR_Y = 224; // matches every other ground-level spawn point in this map
+// The boss room is now much taller than the 180px-tall native viewport (the
+// map grew a full vertical wall-kick shaft elsewhere), so the locked boss
+// camera must center on the ground band, not the map's overall vertical
+// midpoint - the latter would frame mostly empty air above the fight.
+const BOSS_ROOM_CAMERA_Y = BOSS_ROOM_FLOOR_Y - 20;
 // Must be >= BossDoor's own close-tween duration so the ritual never
 // starts while the shutter is still visibly sliding down.
 const BOSS_DOOR_SEAL_MS = 600;
@@ -82,6 +88,11 @@ export class SpeedwayScene extends BaseStageScene {
       );
     },
 
+    energyPickup: (_scene, x, y) => {
+      const pickup = new EnergyPickupStub(this, x, y);
+      this.physics.add.overlap(this.player.hurtboxZone, pickup.pickupZone, () => pickup.collect());
+    },
+
     bossDoor: (_scene, x, _y, object) => {
       this.bossDoor = new BossDoor(this, x, object.y, object.width, object.height);
       this.physics.add.collider(this.player, this.bossDoor.collider);
@@ -137,7 +148,7 @@ export class SpeedwayScene extends BaseStageScene {
     this.bossRoomEntered = true;
 
     const { left, right } = this.bossRoomBounds;
-    this.lockCameraOn((left + right) / 2, this.map.heightInPixels / 2);
+    this.lockCameraOn((left + right) / 2, BOSS_ROOM_CAMERA_Y);
     this.bossDoor?.close(this);
     this.time.delayedCall(BOSS_DOOR_SEAL_MS, () => this.boss?.beginRitual());
   }
