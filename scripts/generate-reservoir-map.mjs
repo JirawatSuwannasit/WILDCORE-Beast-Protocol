@@ -699,13 +699,23 @@ segments[23] = screenU(cursor.col + V_COLS, cursor.row);
 
 segments[25] = screenU(cursor.col + V_COLS, cursor.row);
 const ascentShaftColEnd = cursor.col;
+// `addEntity` takes a CENTER point, not a top-left corner - the zone must
+// span from a margin below the shaft's bottom entry (segments[21].rowEnter,
+// the largest/lowest row) up to a margin above its top exit
+// (segments[25].rowExit, the smallest/highest row), so its *center* is the
+// midpoint of that whole range, not just the top edge (a first version of
+// this passed the top edge as if it were the center, which pinned the
+// zone's bottom half-height above the shaft's real bottom - it never
+// covered the actual entry ledge at all). See DECISIONS.md.
+const ascentShaftTopRow = segments[25].rowExit - 4;
+const ascentShaftBottomRow = segments[21].rowEnter + 6;
 addEntity(
   'ascentShaftZone',
   'elevatorAscentShaftZone',
   tileCenterX((ascentShaftColStart + ascentShaftColEnd) / 2),
-  rowTopY(segments[25].rowExit - 4),
+  rowTopY((ascentShaftTopRow + ascentShaftBottomRow) / 2),
   (ascentShaftColEnd - ascentShaftColStart) * TILE,
-  (segments[21].rowEnter - segments[25].rowExit + 10) * TILE,
+  (ascentShaftBottomRow - ascentShaftTopRow) * TILE,
 );
 addCheckpoint(
   'checkpoint-post-setpiece',

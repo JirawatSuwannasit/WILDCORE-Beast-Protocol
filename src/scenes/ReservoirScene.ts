@@ -18,10 +18,6 @@ import { BodyCapsulePump } from '@/actors/BodyCapsulePump';
 import { toxicUrchinTuning } from '@/config/enemyTuning';
 
 const ARENA_MARGIN = 24;
-// GDD §2.6 "vertical camera zones for shafts": zero X-lerp locks the
-// camera's horizontal scroll to the shaft's center for the ascent's
-// duration (see SpeedwayScene for the identical technique/rationale).
-const NORMAL_CAMERA_LERP = 0.15;
 const BOSS_DOOR_SEAL_MS = 600;
 const WEAPON_GET_STUB_MS = 2600;
 const MID_BOSS_ARENA_HALF_WIDTH = 160;
@@ -41,9 +37,6 @@ export class ReservoirScene extends BaseStageScene {
   private midBossArenaCenterX = 0;
   private midBossDarkOverlay: Phaser.GameObjects.Rectangle | null = null;
   private midBossTriggered = false;
-
-  private ascentShaftZone: Phaser.GameObjects.Zone | null = null;
-  private inAscentShaft = false;
 
   private readonly currents: Current[] = [];
   private readonly urchins: ToxicUrchin[] = [];
@@ -129,7 +122,7 @@ export class ReservoirScene extends BaseStageScene {
     ascentShaftZone: (_scene, x, y, object) => {
       const zone = this.add.zone(x, y, object.width, object.height);
       this.physics.add.existing(zone, true);
-      this.ascentShaftZone = zone;
+      this.registerVerticalCameraZone(zone);
     },
 
     bossDoor: (_scene, x, _y, object) => {
@@ -183,7 +176,6 @@ export class ReservoirScene extends BaseStageScene {
     if (this.stageComplete) return;
     super.fixedUpdate();
     this.updateWater();
-    this.updateAscentShaftCamera();
   }
 
   private updateWater(): void {
@@ -210,27 +202,6 @@ export class ReservoirScene extends BaseStageScene {
     for (const valve of this.valves) {
       valve.updateOverlap(this, this.physics.overlap(this.player.hurtboxZone, valve.zone));
     }
-  }
-
-  /** GDD §2.6 vertical camera zone for the mandatory wall-kick ascent shaft - identical technique to SpeedwayScene. */
-  private updateAscentShaftCamera(): void {
-    if (!this.ascentShaftZone || this.cameraLockedForBoss()) return;
-    const overlapping = this.physics.overlap(this.player.hurtboxZone, this.ascentShaftZone);
-    const camera = this.cameras.main;
-
-    if (overlapping && !this.inAscentShaft) {
-      this.inAscentShaft = true;
-      const zoneBody = this.ascentShaftZone.body as Phaser.Physics.Arcade.StaticBody;
-      camera.scrollX = zoneBody.center.x - camera.width / 2;
-      camera.setLerp(0, NORMAL_CAMERA_LERP);
-    } else if (!overlapping && this.inAscentShaft) {
-      this.inAscentShaft = false;
-      camera.setLerp(NORMAL_CAMERA_LERP, NORMAL_CAMERA_LERP);
-    }
-  }
-
-  private cameraLockedForBoss(): boolean {
-    return this.bossRoomEntered;
   }
 
   protected respawnPlayer(): void {

@@ -32,6 +32,22 @@ const RESPAWN_SAFETY_Y_MARGIN = 200;
 const LOOK_AHEAD_PX = 16;
 const LOOK_AHEAD_LERP = 0.08;
 
+// GDD §2.6: "never scroll the camera in a way that hides where the player
+// will land" - a hard floor under the soft deadzone/lerp follow below. The
+// deadzone (30x60, ~15px/30px half-extents) reacts to normal walking speed
+// comfortably inside these margins, so this only ever engages during fast
+// motion (falls, forced velocity, vertical-zone handoffs) the lerp-based
+// follow can't keep up with in time - see DECISIONS.md.
+const CAMERA_SAFETY_MARGIN_X = 32;
+const CAMERA_SAFETY_MARGIN_Y = 24;
+
+// A vertical camera zone's entry pans to the shaft's center over this long,
+// instead of an instant scrollX snap - avoids a same-frame jump-cut that
+// could otherwise land the player right at (or past) the safety margin
+// before the very first corrected frame renders.
+const VERTICAL_ZONE_ENTRY_PAN_MS = 220;
+const NORMAL_CAMERA_LERP = 0.15;
+
 export type EntitySpawner = (
   scene: BaseStageScene,
   x: number,
@@ -69,6 +85,9 @@ export abstract class BaseStageScene extends BaseScene {
   private readonly fences: ElectricFence[] = [];
   private cameraLocked = false;
   private spawnPoint = { x: 16, y: 16 };
+
+  private verticalCameraZone: Phaser.GameObjects.Zone | null = null;
+  private inVerticalCameraZone = false;
 
   create(): void {
     this.cameras.main.setBackgroundColor(THEME.background);
@@ -182,7 +201,12 @@ export abstract class BaseStageScene extends BaseScene {
       this.physics.add.collider(this.player, bridge, () => bridge.trigger());
     }
 
-    this.cameras.main.startFollow(this.player.visual, false, 0.15, 0.15);
+    this.cameras.main.startFollow(
+      this.player.visual,
+      false,
+      NORMAL_CAMERA_LERP,
+      NORMAL_CAMERA_LERP,
+    );
     this.cameras.main.setDeadzone(30, 60);
 
     this.inputManager = new InputManager([
@@ -315,6 +339,7 @@ export abstract class BaseStageScene extends BaseScene {
     for (const bridge of this.bridges) bridge.fixedUpdate();
 
     this.updateCameraLookAhead();
+    this.updateVerticalCameraZone();
 
     if (
       this.player.hitPoints <= 0 ||
@@ -332,6 +357,12 @@ export abstract class BaseStageScene extends BaseScene {
     }
     this.touchSource.refreshVisuals();
     this.debugOverlay.refresh();
+    // Runs last, after every camera-affecting update this frame (look-ahead
+    // offset, vertical-zone pan/lock, subclass boss-room lock) but before
+    // Phaser's own preRender/render pass consumes scrollX/scrollY - see
+    // DECISIONS.md for why this ordering guarantees the correction lands
+    // before anything is drawn, not one frame late.
+    this.enforceCameraSafetyMargin();
   }
 
   private isOnSpeedStrip(): boolean {
@@ -345,6 +376,62 @@ export abstract class BaseStageScene extends BaseScene {
     const targetOffset = this.player.facingDirection * LOOK_AHEAD_PX;
     const current = camera.followOffset.x;
     camera.setFollowOffset(Phaser.Math.Linear(current, -targetOffset, LOOK_AHEAD_LERP), 0);
+  }
+
+  /**
+   * Registers a Tiled zone as a "vertical camera zone" (GDD §2.6: "vertical
+   * camera zones for shafts (X-style), lock per arena"). While the player
+   * overlaps it, horizontal scroll locks to the zone's own center instead
+   * of following the player sideways, so a wall-kick shaft's climb never
+   * scrolls left/right out from under them. Call once per shaft zone from
+   * a subclass's entityRegistry spawner.
+   */
+  protected registerVerticalCameraZone(zone: Phaser.GameObjects.Zone): void {
+    this.verticalCameraZone = zone;
+  }
+
+  private updateVerticalCameraZone(): void {
+    if (!this.verticalCameraZone || this.cameraLocked) return;
+    const overlapping = this.physics.overlap(this.player.hurtboxZone, this.verticalCameraZone);
+    const camera = this.cameras.main;
+
+    if (overlapping && !this.inVerticalCameraZone) {
+      this.inVerticalCameraZone = true;
+      const zoneBody = this.verticalCameraZone.body as Phaser.Physics.Arcade.StaticBody;
+      const targetScrollX = zoneBody.center.x - camera.width / 2;
+      // A zero X-lerp is what actually does the locking (startFollow's own
+      // per-frame scrollX += (target-scrollX)*lerpX holds scrollX exactly
+      // still at lerpX=0) - the tween below only smooths the *entry*, so a
+      // player who crosses the boundary off-center from the shaft's true
+      // midpoint doesn't get an instant same-frame jump-cut.
+      camera.setLerp(0, NORMAL_CAMERA_LERP);
+      this.tweens.add({
+        targets: camera,
+        scrollX: targetScrollX,
+        duration: VERTICAL_ZONE_ENTRY_PAN_MS,
+        ease: 'Sine.easeOut',
+      });
+    } else if (!overlapping && this.inVerticalCameraZone) {
+      this.inVerticalCameraZone = false;
+      camera.setLerp(NORMAL_CAMERA_LERP, NORMAL_CAMERA_LERP);
+    }
+  }
+
+  /** GDD §2.6 camera safety floor - see the module-level constants' doc comment. */
+  private enforceCameraSafetyMargin(): void {
+    if (this.cameraLocked) return;
+    const camera = this.cameras.main;
+    const target = this.player.visual;
+
+    const maxScrollX = target.x - CAMERA_SAFETY_MARGIN_X;
+    const minScrollX = target.x - (camera.width - CAMERA_SAFETY_MARGIN_X);
+    if (camera.scrollX > maxScrollX) camera.scrollX = maxScrollX;
+    else if (camera.scrollX < minScrollX) camera.scrollX = minScrollX;
+
+    const maxScrollY = target.y - CAMERA_SAFETY_MARGIN_Y;
+    const minScrollY = target.y - (camera.height - CAMERA_SAFETY_MARGIN_Y);
+    if (camera.scrollY > maxScrollY) camera.scrollY = maxScrollY;
+    else if (camera.scrollY < minScrollY) camera.scrollY = minScrollY;
   }
 
   // --- Hazard/enemy reactions ---------------------------------------------

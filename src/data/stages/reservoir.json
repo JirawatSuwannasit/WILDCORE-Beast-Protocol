@@ -3809,7 +3809,7 @@
           "type": "ascentShaftZone",
           "name": "elevatorAscentShaftZone",
           "x": 5120,
-          "y": 1328,
+          "y": 1792,
           "width": 1088,
           "height": 928,
           "visible": true,
