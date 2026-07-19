@@ -106,6 +106,12 @@
   8. **Final exam** (4–5 screens) — hardest combination of everything taught.
   9. **Pre-boss corridor** (1–2 screens, energy pickups) → **checkpoint** → boss room.
 - **Density:** one enemy encounter per 1.5–2 screens on average; 8–12 pickups per stage; never two hazard types introduced in the same room.
+- **Route shape (anti-corridor rule):** stages must NOT read as a flat left-to-right line.
+  - **Axis mix:** ≥ 35% of the stage's path is vertical (ascents/descents). Never more than 3 consecutive screens moving in the same direction; the dominant direction changes at least 4 times per stage.
+  - **Mandatory per stage:** 1 wall-kick **ascent shaft** (2+ screens tall), 1 controlled **descent** (readable landings, no blind drops onto hazards), and 1 **multi-floor room** (stacked platform layers where the player picks a layer).
+  - **Branch & rejoin:** at least one fork on the main path — e.g., **upper route = riskier + pickups, lower route = safer + slower** — both rejoining before the next beat. Secrets branch off the less obvious side.
+  - **Camera:** vertical camera zones for shafts (X-style), lock per arena; never scroll the camera in a way that hides where the player will land.
+  - Descents count toward length; falling sections must let the player steer and see ≥ half a screen below.
 - **Checkpoints:** start / post-mid-boss / post-setpiece / pre-boss (4 total on this scale).
 - Main path never requires backtracking; secret branches may.
 
@@ -125,6 +131,7 @@ SHADOW PANTHER → Umbra Claw → (back to Volt Cheetah)
 ### 3.1 VOLT CHEETAH — "Speedway Savanna"
 - **Theme:** Golden-hour solar highway across a grass sea; wind turbines, sun panels.
 - **Gimmicks:** Speed-boost strips, timed collapsing bridges, electric fences that pulse on a beat.
+- **Route shape:** branch at the turbine tower (upper blade-platform route = risky + pickups / lower fence corridor = safe) rejoining at the mid-boss; wall-kick **ascent** inside the solar pylon (3 screens); high-speed downhill boost-strip **descent** as the setpiece; multi-floor highway underpass breather.
 - **Mid-boss:** Twin patrol drones circling a pylon.
 - **Boss pattern:** Dashes wall-to-wall (3 speeds, telegraph by crouch length) → wall-kick overhead pounce → Volt Chain sweep along the floor. Weakness (Umbra Claw) interrupts a dash.
 - **Weapon gained — VOLT CHAIN:** lightning bolt that chains to 1 nearby enemy. Utility: powers dead machinery.
@@ -133,6 +140,7 @@ SHADOW PANTHER → Umbra Claw → (back to Volt Cheetah)
 ### 3.2 TIDE MANTA — "Coral Reservoir"
 - **Theme:** Sunken cozy aquarium-city; glass tunnels, jellyfish lamps, teal + coral palette.
 - **Gimmicks:** Water raises/lowers on valves; currents push jumps; float physics underwater.
+- **Route shape:** long controlled **descent** into the sunken city through glass tunnels; valves change which floors are swimmable → layer choices; branch: upper flooded gallery (currents + pickups) vs lower drained maintenance crawl (safe, slow); wall-kick **ascent** up a drained elevator shaft; the Body-Capsule pump shaft hangs off the lower route.
 - **Mid-boss:** Anglerfish lamp mimic in a dark tunnel.
 - **Boss pattern:** Glides in sine waves → burrows into water floor, erupts below player (shadow telegraph) → ring of water orbs. Volt Chain electrifies the water it swims in.
 - **Weapon — TIDE BURST:** lobbed water bomb, splash arc. Utility: douses fires, reveals invisible platforms in Eclipse District.
@@ -141,6 +149,7 @@ SHADOW PANTHER → Umbra Claw → (back to Volt Cheetah)
 ### 3.3 MAGMA RHINO — "Ember Foundry"
 - **Theme:** Warm-lit forge village inside a volcano; copper pipes, hanging lanterns.
 - **Gimmicks:** Rising lava chase section, piston crushers on visible rails, heat vents that lift jumps.
+- **Route shape:** heat-vent **ascent** up the forge chimney (vents = vertical gimmick); branch: upper catwalks over the crushers (fast, risky) vs lower pipe corridor (slow, safe); the rising-lava chase is a forced vertical **ascent** setpiece; **descent** beside a lava-fall with heat-vent slowfall; multi-floor forge hall with piston layers.
 - **Mid-boss:** Slag golem that re-forms once.
 - **Boss pattern:** Charging ram (cracks the wall, brief stun opening) → lava geysers in a readable sequence → horn toss of magma rocks. Tide Burst extinguishes his charge flame.
 - **Weapon — MAGMA CHARGE:** short piercing ram-shot that carries Ember forward. Utility: melts ice walls.
@@ -149,6 +158,7 @@ SHADOW PANTHER → Umbra Claw → (back to Volt Cheetah)
 ### 3.4 FROST OWL — "Aurora Observatory"
 - **Theme:** Snowy mountain observatory under auroras; telescope domes, string lights.
 - **Gimmicks:** Ice physics (slide), breakable icicle platforms, snowfall that hides gaps until close.
+- **Route shape:** overall **ascending** stage — climbing the mountain to the domes; branch: outside ridge (wind + snowfall, shortcut + Heart Chip) vs inside heated corridors (safe); icicle-platform **descent** into a crevasse and back; wall-kick **ascent** inside the telescope tower with vertical camera; multi-floor dome interior before the boss.
 - **Mid-boss:** Frost lens turret that reflects your shots.
 - **Boss pattern:** Silent glide (screen dims, only eyes glow) → feather-blade fan spread → freezing screech that must be ducked under a snow bank. Magma Charge burns through her ice shield.
 - **Weapon — FROST TALON:** shuriken that freezes minor enemies into **temporary platforms** (key traversal tool).
@@ -157,6 +167,7 @@ SHADOW PANTHER → Umbra Claw → (back to Volt Cheetah)
 ### 3.5 GALE FALCON — "Skyhaven Ruins"
 - **Theme:** Floating shrine islands at sunset; rope bridges, prayer flags, clouds below.
 - **Gimmicks:** Gust cycles that extend/shorten jumps (visible leaf particles = wind direction), collapsing shrine tiles, bottomless sky.
+- **Route shape:** island hopping with real elevation — drops to lower islands are readable (birds mark edges); branch: upper rope-bridge line (collapsing tiles, pickups) vs lower cloud-platform line (gust-assisted, slower); wall-kick **ascent** up the shrine tower between flag poles; setpiece = collapsing-shrine **descent** riding falling tiles.
 - **Mid-boss:** Kite serpent weaving between islands.
 - **Boss pattern:** Dive-bomb along a laser sightline → tornado wall that forces wall-kick climbing → feather barrage arcs. Frost Talon clips her wings mid-glide.
 - **Weapon — GALE CUTTER:** boomerang wind blade, returns to Ember; can cut ropes/cables.
@@ -165,6 +176,7 @@ SHADOW PANTHER → Umbra Claw → (back to Volt Cheetah)
 ### 3.6 VENOM MANTIS — "Bloom Greenhouse"
 - **Theme:** Overgrown botanical biodome, bioluminescent flowers, dripping vines. Cozy-eerie.
 - **Gimmicks:** Toxic pools (DoT, not instant death), bounce flowers, vines climbable only where flowering.
+- **Route shape:** vine-climb **ascents** and bounce-flower vertical launches; branch: canopy route (bounce chains, pickups) vs forest-floor route (toxic pools, steadier jumps), rejoining at the pitcher-plant mid-boss; **descent** into the root cellar (dark, glow-flowers light the way); multi-floor terrarium tiers as the final exam.
 - **Mid-boss:** Pitcher-plant that swallows and spits projectiles back.
 - **Boss pattern:** Scythe triple-slash combo (rhythm: slow-slow-fast) → ceiling hang + acid rain → grass-cloak ambush (only her eyes visible). Gale Cutter blows away her toxin cloud and cloak.
 - **Weapon — VENOM STING:** sticky dart, damage over time; one dart per enemy. Utility: corrodes rusted blocks.
@@ -173,6 +185,7 @@ SHADOW PANTHER → Umbra Claw → (back to Volt Cheetah)
 ### 3.7 TERRA PANGOLIN — "Hollow Quarry"
 - **Theme:** Lantern-lit mine village in giant geodes; minecart rails, crystal glow.
 - **Gimmicks:** Minecart ride sections (jump between rails), collapsing floors (crack telegraph), dig-walls broken by charged shots.
+- **Route shape:** the minecart ride is a long **descent** deeper into the geode (rail jumps between height levels); branch: cart rail line (fast, commitment jumps) vs walking gantry (slow, safe) running in parallel; wall-kick **ascent** shaft opened by dig-walls (charged shots reveal the climbing route); multi-floor geode chamber with crystal platforms.
 - **Mid-boss:** Drill beetle racing your minecart.
 - **Boss pattern:** Rolls into a ball ricocheting off walls (count the bounces: always 3) → burrows, spikes erupt trailing the player → shield curl (invulnerable) until Venom Sting corrodes his plates.
 - **Weapon — TERRA SPIKE:** ground wave that travels floor/walls. Utility: triggers weak floors safely.
@@ -181,6 +194,7 @@ SHADOW PANTHER → Umbra Claw → (back to Volt Cheetah)
 ### 3.8 SHADOW PANTHER — "Eclipse District"
 - **Theme:** Neon night market city under a permanent eclipse; paper lanterns, rain puddles reflecting signs.
 - **Gimmicks:** Lights-out zones (only lantern radius visible), invisible platforms revealed by rain/Tide Burst, rooftop AC-unit parkour.
+- **Route shape:** constant up/down rooftop parkour; branch: rooftop line (rain-revealed platforms, risky + pickups) vs street market line (lights-out lantern zones, slower), crossing at fire escapes; wall-kick **ascent** up a neon-sign scaffold (segments light as you climb); **descent** through a market alley into the cable-car station (multi-floor room); the Arms-Capsule vault sits at the scaffold top.
 - **Mid-boss:** Neon sign chimera (lit segments = hitbox).
 - **Boss pattern:** Teleport slashes between lantern posts (the lantern flickers before he appears) → screen-dark pounce (eyes betray position) → afterimage clone dash (real one casts a shadow). Terra Spike travels walls and knocks him off perches.
 - **Weapon — UMBRA CLAW:** short-range dash-slash with i-frames (high risk, high reward; closes the loop → beats Volt Cheetah).
