@@ -1,10 +1,17 @@
 import Phaser from 'phaser';
 import { playerTuning, TILE_SIZE } from '@/config/playerTuning';
+import { waterTuning } from '@/config/waterTuning';
 import { THEME } from '@/config/theme';
 import { getRectTexture } from '@/systems/placeholderTexture';
 import { FrameWindow } from '@/systems/frameWindow';
 import { EdgeDetector } from '@/systems/edgeDetector';
 import { computeJumpVelocities, applyJumpCut } from '@/systems/jumpPhysics';
+import {
+  addCurrentPush,
+  capFallSpeed,
+  selectJumpVelocity,
+  submergedGravity,
+} from '@/systems/waterPhysics';
 import { BusterWeapon } from '@/actors/BusterWeapon';
 import { WeaponController } from '@/actors/WeaponController';
 import { InterpolatedPhysicsSprite } from '@/actors/InterpolatedPhysicsSprite';
@@ -64,6 +71,14 @@ export class Player extends InterpolatedPhysicsSprite {
   private hp: number;
   private readonly maxHp: number;
   private speedMultiplier = 1;
+
+  // GDD §3.2 Coral Reservoir gimmick: underwater float physics + currents.
+  // Both default to "no effect" and expire unless reapplied every frame -
+  // same pattern as speedMultiplier - so stages that never call these
+  // (Speedway, Gym) are completely unaffected.
+  private submerged = false;
+  private currentPushX = 0;
+  private currentPushY = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     const { width, height } = playerTuning.size;
@@ -142,6 +157,12 @@ export class Player extends InterpolatedPhysicsSprite {
     const touchingWallLeft = body.blocked.left;
     const touchingWallRight = body.blocked.right;
 
+    body.setGravityY(
+      this.submerged
+        ? submergedGravity(playerTuning.gravity, waterTuning.buoyancy.gravityMultiplier)
+        : playerTuning.gravity,
+    );
+
     this.tickTimers();
 
     if (this.hitstunFramesRemaining > 0) {
@@ -184,6 +205,11 @@ export class Player extends InterpolatedPhysicsSprite {
     // --- Variable jump height: release early = short hop (GDD §2.2) ---
     if (!input.jumpHeld && body.velocity.y < 0) {
       body.setVelocityY(applyJumpCut(body.velocity.y, cutVelocity));
+    }
+
+    // --- Underwater float physics (GDD §3.2): floatier terminal fall speed. ---
+    if (this.submerged && body.velocity.y > 0) {
+      body.setVelocityY(capFallSpeed(body.velocity.y, waterTuning.buoyancy.maxFallSpeedY));
     }
 
     // --- Wall slide (X-style): airborne, touching a wall, falling. ---
@@ -237,8 +263,30 @@ export class Player extends InterpolatedPhysicsSprite {
       (frames) => this.grantIFrames(frames),
     );
 
+    // --- Currents (GDD §3.2/§3b): 0-damage movement push, layered on top of whatever else set velocity this step. ---
+    if (this.currentPushX !== 0 || this.currentPushY !== 0) {
+      const pushed = addCurrentPush(
+        body.velocity.x,
+        body.velocity.y,
+        this.currentPushX,
+        this.currentPushY,
+      );
+      body.setVelocity(pushed.x, pushed.y);
+    }
+
     this.syncHurtboxAndVisual();
     this.updateState(grounded, onWall);
+  }
+
+  /** GDD §3.2: called every fixedUpdate by a water-gimmick stage while the player overlaps flooded water; defaults to false (dry) so other stages are unaffected. */
+  setSubmerged(submerged: boolean): void {
+    this.submerged = submerged;
+  }
+
+  /** GDD §3.2/§3b: currents push jumps, 0 damage - call every fixedUpdate with the active push vector (0,0 when not overlapping any current). */
+  applyCurrentPush(pushX: number, pushY: number): void {
+    this.currentPushX = pushX;
+    this.currentPushY = pushY;
   }
 
   private syncHurtboxAndVisual(): void {
@@ -296,7 +344,10 @@ export class Player extends InterpolatedPhysicsSprite {
   }
 
   private performJump(body: Phaser.Physics.Arcade.Body): void {
-    body.setVelocityY(launchVelocity);
+    // GDD §3.2: submerged, a jump press is a gentler swim "kick", not the full dry-land launch.
+    body.setVelocityY(
+      selectJumpVelocity(this.submerged, launchVelocity, waterTuning.buoyancy.swimKickVelocityY),
+    );
     this.jumpBuffer.consume();
     this.coyoteTimer.consume();
   }

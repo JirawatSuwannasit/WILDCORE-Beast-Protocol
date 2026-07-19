@@ -74,3 +74,42 @@ export const spikeTuning = {
   /** GDD §3b hazard matrix: spikes are lethal (instant respawn at checkpoint). */
   lethal: true,
 } as const;
+
+// --- Coral Reservoir (GDD §3.2 / §3b) --------------------------------------
+
+export const bubbleCrabTuning = {
+  hp: 2,
+  walkSpeed: 24,
+  /** Popped by any hit (buster or weapon); stays vulnerable this long (2s at 60Hz) before re-bubbling. */
+  vulnerableFrames: 120,
+} as const;
+
+export const dartFishTuning = {
+  hp: 1,
+  /** Idles, then wiggles this long (>=20f telegraph) before dashing straight. */
+  wiggleFrames: 20,
+  dashSpeed: 150,
+  /** Frames the dash lasts before the fish stops and returns to idling. */
+  dashFrames: 30,
+  idleFrames: 90,
+} as const;
+
+export const toxicUrchinTuning = {
+  /** Stationary reef hazard - contact damage, not lethal (unlike spikes). */
+  contactDamage: 1,
+} as const;
+
+export const currentTuning = {
+  /** Visual telegraph only - GDD §3b: currents are 0 damage, always shown by bubbles. */
+  bubbleCount: 5,
+} as const;
+
+export const waterValveTuning = {
+  /** Debounce so one contact toggles the gate exactly once, not every overlapping frame. */
+  toggleCooldownFrames: 30,
+} as const;
+
+export const waterGateTuning = {
+  /** How long the water-level tween takes when a valve raises/lowers it (GDD §3.2). */
+  toggleTweenMs: 700,
+} as const;
