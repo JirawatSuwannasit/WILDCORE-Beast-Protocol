@@ -3,7 +3,8 @@
 Mega Man-style mobile action platformer for Android. Phaser 3 + TypeScript + Vite, wrapped as a
 native Android app with Capacitor 6.
 
-Design spec: [`docs/GDD.md`](docs/GDD.md). Deviations from the spec are logged in
+Design spec: [`docs/GDD.md`](docs/GDD.md). Project operating guide (how milestones are run):
+[`docs/PO_PLAYBOOK.md`](docs/PO_PLAYBOOK.md). Deviations from the spec are logged in
 [`DECISIONS.md`](DECISIONS.md).
 
 ## Prerequisites

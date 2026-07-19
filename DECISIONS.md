@@ -3,6 +3,12 @@
 Running log of deviations from `docs/GDD.md`, and judgment calls made where a requirement was
 ambiguous. One entry per decision, newest first.
 
+## Docs sync — GDD route-shape (anti-corridor) rule + PO Playbook added
+
+- **`docs/GDD.md`** synced with the new §2.6 "Route shape (anti-corridor rule)" subsection and a per-stage "Route shape" bullet in §3.1–3.8 (branch-and-rejoin, a mandatory wall-kick ascent shaft, a controlled descent, and a multi-floor room per stage, ≥35% of path length vertical). Diffed byte-for-byte against the uploaded source to confirm this is the only change - nothing else in the GDD moved.
+- **`docs/PO_PLAYBOOK.md`** added (new file - no playbook previously existed in the repo). Linked from `README.md` alongside the existing GDD/DECISIONS links.
+- **Known gap, not addressed in this PR:** Speedway Savanna was fully built in M2/M2-REBUILD *before* this route-shape standard existed. It doesn't currently implement §2.6's anti-corridor rules or §3.1's new Route shape bullet (branch-and-rejoin at the turbine tower, a 3-screen pylon ascent, a boost-strip descent setpiece, a multi-floor underpass breather) - it's still the flat-with-one-small-shaft layout from before. This is a docs-only sync per what was asked; reworking Speedway's layout to match is a separate, explicit task, same as M2-REBUILD itself was.
+
 ## Debug tool — traversal double-jump toggle
 
 - **Temporary debug aid - remove before v1.0.** `debugFlags.doubleJump` (`src/systems/debugFlags.ts`), toggleable from the F3/three-finger debug overlay, is a testing tool only and is not part of the player kit or GDD design.
