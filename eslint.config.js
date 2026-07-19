@@ -4,7 +4,16 @@ import eslintConfigPrettier from 'eslint-config-prettier';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'android/**', 'node_modules/**', 'coverage/**', 'eslint.config.js'],
+    ignores: [
+      'dist/**',
+      'android/**',
+      'node_modules/**',
+      'coverage/**',
+      'eslint.config.js',
+      // Standalone Node content-generator for reservoir.json (GDD §2.6/§3.2)
+      // - a build-time authoring tool, not part of the typed app/tsconfig.
+      'scripts/**',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,

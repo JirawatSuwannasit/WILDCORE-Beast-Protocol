@@ -246,6 +246,7 @@ SHADOW PANTHER → Umbra Claw → (back to Volt Cheetah)
 | Collapsing floor/tile | Quarry, Skyhaven | — (fall) | Crack/wobble telegraph 24f before giving way. |
 | Neon live wire | Eclipse | 2 | Segments light in sequence — readable like the fence beat. |
 | Currents / gusts / ice | Reservoir / Skyhaven / Observatory | 0 | Movement modifiers only, always shown by particles (bubbles / leaves / sheen). |
+| Toxic urchin | Reservoir | 1 (contact) | Stationary reef hazard, always visible; not lethal (unlike spikes). |
 
 ## 4. Boss Design Rules
 - Boss rooms are single screens, shutter doors both sides, health-fill ritual (~1.5 s).

@@ -44,3 +44,64 @@ export const voltCheetahTuning = {
     linkFrames: 10,
   },
 } as const;
+
+/** ANGLERFISH mid-boss (GDD §3.2: "lamp mimic in a dark tunnel"). Simpler than a full boss - no shutter door/ritual, single-screen arena, no weakness hook. */
+export const anglerfishTuning = {
+  maxHp: 6,
+  contactDamage: 2,
+
+  /** Idles disguised as a hanging lamp - a slow bioluminescent flicker, no threat. */
+  mimicFlickerFrames: 40,
+
+  /** GDD feel pillar #4: >=20f telegraph before the lure-lit reveal + lunge. */
+  revealTelegraphFrames: 26,
+  lungeSpeedX: 130,
+  lungeSpeedY: 40,
+  lungeFrames: 24,
+  retreatSpeed: 60,
+  /** Frames back at rest (re-mimicking) before it can lunge again. */
+  cooldownFrames: 70,
+} as const;
+
+/**
+ * TIDE MANTA (GDD §3.2 / §4). 3 core patterns, all dodgeable with the
+ * buster alone; weak to Volt Chain (wired via weaknessWheel.ts - it
+ * "electrifies the water it swims in", represented as a visual tint
+ * during the stun rather than a separate gameplay effect).
+ */
+export const tideMantaTuning = {
+  maxHp: 16,
+  fillRitualMs: 1500,
+  desperationHpFraction: 0.25,
+  weaknessDamage: 4,
+  contactDamage: 3,
+
+  sineGlide: {
+    telegraphFrames: 24,
+    durationFrames: 150,
+    speedX: 70,
+    amplitudeY: 40,
+    periodFrames: 90,
+  },
+
+  burrowErupt: {
+    burrowFrames: 20,
+    travelFrames: 40,
+    /** Shadow telegraph under the player before eruption (GDD §3.2: "shadow telegraph"; >=20f). */
+    shadowTelegraphFrames: 26,
+    eruptVelocityY: -260,
+    gravity: 900,
+    damage: 3,
+  },
+
+  orbRing: {
+    telegraphFrames: 24,
+    orbCount: 8,
+    orbSpeed: 90,
+    orbDamage: 2,
+  },
+
+  desperation: {
+    linkFrames: 10,
+  },
+} as const;

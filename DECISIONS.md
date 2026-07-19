@@ -3,6 +3,133 @@
 Running log of deviations from `docs/GDD.md`, and judgment calls made where a requirement was
 ambiguous. One entry per decision, newest first.
 
+## M4.1 — Coral Reservoir (GDD §3.2 / §2.6 / §3b): the second full stage
+
+- **Route shape is DESCENT-dominant by design, not just "meets the minimums."** The 35-screen
+  direction sequence (`RRD DRDRD RDRDR R DDDRRD UUURU RDR DRURD RR`) front-loads the descent as a
+  sustained alternating D/R ratchet through beats 1-5 (13 of 18 vertical screens), then reverses
+  hard into a concentrated 4-screen wall-kick ascent block as the setpiece (beat 6) - the opposite
+  shape from Speedway's single-ascent-then-single-descent structure. Computed stats: **51.4%
+  vertical** (18/35, vs. Speedway's 38.2%), **max same-direction run 3** (the ≤3 ceiling, hit
+  exactly twice), **25 direction changes** (vs. Speedway's 17). All three numbers and the full
+  beat-by-beat screen list are mechanically validated by the generator script itself (see below),
+  not eyeballed - same discipline M2-REBUILD-2 established.
+- **Kept the map generator script this time (`scripts/generate-reservoir-map.mjs`), unlike
+  Speedway's.** M2-REBUILD-2's generator was run ad hoc and never committed - DECISIONS.md
+  describes its methodology in prose only, with no way to regenerate or tweak the map without
+  rewriting it from scratch. Given Reservoir's geometry is meaningfully more complex (valve-gated
+  multi-tier rooms, a branch, a 4-screen ascent shaft, ~55 placed objects, all cross-validated
+  against real jump-reach and ground-anchor checks before the file is written), keeping the
+  generator as a real, runnable, documented artifact is a clear net improvement for anyone tuning
+  this stage later. `eslint.config.js` excludes `scripts/**` from the typed-app lint project (it's
+  a standalone Node content-authoring tool, not shipped code, same category as the tileset
+  placeholder generator conceptually but at build-time rather than runtime).
+- **Water valves/gates: the runtime object supplies "closed," the baked tile layer never does.**
+  A `WaterGate` is a rectangular region that's either drained (a real static collider, walkable,
+  blocks passage) or flooded (collider disabled, a submersion zone the player floats/swims in).
+  Critically, the generator **deletes** the ground-layer tiles behind every gate's full footprint
+  (not just its top row) rather than leaving them solid - if the baked tilemap layer stayed solid
+  there, disabling the gate's own runtime collider would do nothing, since Arcade tilemap
+  collision is a separate system from a standalone static image's collider. First version of the
+  multi-floor room only deleted a single tile row per gate (matching the gate's own thin visual
+  plate) and left the fill tiles beneath it solid - caught before it shipped by reasoning through
+  the two-collision-systems interaction, not by symptom-chasing; fixed by sizing both the deleted
+  tile region and the gate's own collider/submersion-zone to the *entire* connecting shaft between
+  tiers, so closing a valve genuinely reads as "solid floor filling this gap" and opening it
+  genuinely floods the whole connecting space, not just a token slit.
+- **Valve -> gate linking is resolved after every entity is spawned, not during spawning.** Tiled
+  object order isn't guaranteed to put a `waterValve` before the `waterGate` it targets (and
+  shouldn't need to be authored that way). `ReservoirScene` records `{valve, targetGateName}` pairs
+  during `setupEntities()` (via the existing `entityRegistry` spawner mechanism) and resolves the
+  actual `WaterGate` reference in a second pass inside `create()`, after `super.create()` returns -
+  same "defer, don't hand-order" instinct as `PatrolDrone`'s pylon lookup in Speedway, just as a
+  batch instead of a single lookup. Verified live: toggling the tutorial valve directly flips its
+  gate's `isOpen` from false to true.
+- **Underwater float physics is three small, backward-compatible hooks on `Player`, not a parallel
+  movement mode.** `setSubmerged(bool)` and `applyCurrentPush(x,y)` both default to "no effect" and
+  (like the existing `applySpeedMultiplier`) expire unless reapplied every fixed step - so Speedway
+  and the Gym, which never call either, are provably unaffected (full regression suite - 110 tests
+  - still green, typecheck/lint/build clean). While submerged: gravity is scaled by
+  `waterTuning.buoyancy.gravityMultiplier` (0.35), fall speed is clamped to a lower terminal
+  velocity, and a jump *press* becomes a gentler "swim kick" (`selectJumpVelocity`) instead of the
+  full dry-land launch - tapped repeatedly to swim upward, Mega-Man-X-underwater style. Wall-kick
+  itself is untouched (Reservoir's one ascent shaft is a *drained* elevator per the GDD spec, i.e.
+  dry, so this never actually needs to interact with wall-kick physics in practice, but the code
+  doesn't special-case it either way).
+- **Currents push by literally adding a vector onto whatever velocity the frame already computed**,
+  applied last in `Player.fixedUpdate` (after buster/weapons/dash/wall-kick all had their say) so a
+  current genuinely layers on top of player intent rather than fighting the state machine for
+  priority - directly implements "currents push jumps" (GDD §3.2) since a jump's upward velocity
+  gets nudged exactly like anything else. 0 damage, always shown by drifting bubble sprites (GDD
+  §3b), confirmed via the pure `addCurrentPush` unit tests and a live overlap check in the branch's
+  upper gallery.
+- **Bubble Crab's bubble-pop is a `takeDamage`/`applyWeaponHit` override, not a new `Enemy` hook.**
+  While bubbled, any hit (buster or weapon) is intercepted before it reaches `Enemy.takeDamage` and
+  converted into "pop the bubble, start a 2s vulnerable window" instead of real damage; a hit that
+  lands *during* the vulnerable window falls through to `super.takeDamage` normally. This keeps the
+  base `Enemy` class untouched (no new virtual method), consistent with how `VoltCheetah` already
+  overrides `applyWeaponHit` for its own special case.
+- **"Walks floor/walls" (GDD §3b) is a closed kinematic rectangle loop, not real wall-relative
+  gravity.** Building genuine per-surface gravity reorientation for one enemy type was judged out
+  of scope for what the line is actually asking for. `BubbleCrab` disables gravity and drives its
+  own position via `body.reset()` around a floor-then-wall-then-floor perimeter (same idiom
+  `PatrolDrone`'s orbit mode already uses for circular motion) - it visibly walks a full floor run,
+  then climbs a wall run, then walks back, satisfying the literal "floor/walls" behavior without a
+  general-purpose surface-walking system.
+- **The Body Capsule's Volt-Chain gate reuses the exact M3 utility-tag mechanism, not a new
+  inventory flag.** Volt Chain's utility tag is `'power'` (`weaknessWheel.ts`, GDD §3.1's own
+  "Utility: powers dead machinery" line) - it's the *only* weapon tagged `'power'`, so
+  `BodyCapsulePump implements TaggedUtility { requiredTag: 'power' }` firing-and-hitting the pump
+  with Volt Chain specifically *is* "requires Volt Chain to power the pump," through the same
+  `resolveUtilityHit` path every other weapon-gated stage object already uses. Per M3's own logged
+  decision, there's no save/progression system yet to source a real "does the player *own* Volt
+  Chain" flag from (all 8 weapons start unlocked) - so "lacks Volt Chain" is operationalized as "the
+  currently equipped weapon isn't Volt Chain," which is both testable today and exactly what a
+  future save-gated version would still need to check in addition. The readable "locked" hint is a
+  static sign (`PUMP / NEEDS / VOLT CHAIN`) visible the entire time the pump is unpowered, not a
+  one-shot popup - correct whether the player has genuinely never unlocked Volt Chain (once a save
+  system exists) or simply isn't holding it equipped right now.
+- **Anglerfish (mid-boss) gets no shutter door or HP-fill ritual**, matching Speedway's twin
+  Patrol Drones precedent exactly - GDD §4's door/ritual rules read as boss-room rules, and the
+  existing mid-boss doesn't get them either. It's a bespoke small FSM (mimic -> proximity-triggered
+  reveal telegraph, ≥20f -> lunge -> retreat -> re-mimic) rather than a reused regular-enemy class,
+  since "lamp mimic" doesn't map onto any existing enemy's behavior the way "twin drones circling a
+  pylon" mapped onto Patrol Drone's orbit mode. The "dark tunnel" setting is a simple darkening
+  overlay over the arena screen, triggered on entry and faded out on defeat - full spotlight/vision-
+  cone lighting was judged out of scope for a placeholder-art milestone (Eclipse District's
+  lights-out zones are a full stage away and not built yet either).
+- **Tide Manta's three patterns and weakness hook are a structural mirror of VoltCheetah**, on
+  purpose - same FSM shape (`ritual -> idle -> telegraph -> pattern -> recover`, same desperation-
+  queue-a-second-pattern-under-25%-HP mechanic, same `takesWeakness`/`applyWeaponHit` split). Burrow
+  during the burrow/travel phase sets `invulnerable = true` ("hidden underground - nothing to hit")
+  and clears it the instant it erupts into view; without this, a stray Volt Chain hit landing on the
+  boss's (still-physically-present) body mid-burrow would incorrectly interrupt the pattern for free
+  even though nothing should have been able to connect - caught by tracing `takesWeakness`'s guard
+  clause before it shipped, not by observing it live. "Electrifies the water it swims in" (GDD
+  §3.2's flavor text for the weakness reaction) is implemented as a self-contained tint flash on the
+  hit, not a separate gameplay hazard - verified live: a Volt Chain hit deals exactly the fixed 4
+  weakness damage and forces `stunned`; a non-weakness hit (Gale Cutter) deals its own damage with
+  no forced interrupt, same as VoltCheetah's already-proven behavior.
+- **Toxic Urchin added to the GDD §3b hazard matrix table.** The milestone prompt named it
+  explicitly but the table (last synced in the M2-REBUILD-2 docs pass) didn't have a row for it.
+  Non-lethal contact damage (1, unlike spikes' lethal contact) - it's a stationary reef obstacle you
+  route around, not an instant-kill trap, and nothing in the prompt or GDD tone suggested otherwise.
+- **Verification:** typecheck/lint/format/test (110 unit tests, 11 new for `waterPhysics.ts`)/build
+  all clean. Live-browser verification via a temporary `window.__debugGame` hook in `main.ts`
+  (same technique DECISIONS.md's ground-collision bugfix entry describes, reverted before commit -
+  `git diff src/main.ts` is empty in the final tree): scene boot, real-time traversal through
+  intro/tutorial/escalation with real keyboard input, the tutorial valve's gate toggling live,
+  weapon-wheel cycling to Volt Chain, firing at the Body Capsule pump and the boss, and the full
+  ritual -> weakness-hit -> interrupt -> normal-hit sequence on Tide Manta - zero console/page
+  errors throughout.
+- **Known gap, flagged rather than silently assumed solved:** the 4-screen wall-kick ascent shaft's
+  full bottom-to-top chained-kick climbability wasn't verified end-to-end by a scripted bot, for the
+  same reason PR #11's Speedway shaft wasn't - real chained wall-kick *timing* is a feel/skill
+  question a synthetic-input harness doesn't stand in for well. Each individual band's geometry uses
+  the exact 3-tile gap width the Speedway bugfix log already confirmed is comfortably kickable
+  (48px required vs. ~63.5-68.5px available). Needs a real-device playtest pass, same caveat already
+  on record for Speedway's own shaft.
+
 ## M3 — Weapon system (GDD §5): 8 boss weapons, weakness wheel, utility tags
 
 - **Architecture mirrors the existing jumpPhysics.ts split.** `src/data/weaknessWheel.ts` and
