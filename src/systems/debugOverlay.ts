@@ -3,8 +3,16 @@ import { THEME } from '@/config/theme';
 import type { Player } from '@/actors/Player';
 import type { TargetDummy } from '@/actors/TargetDummy';
 import { debugBuildEnabled, debugFlags, toggleDebugDoubleJump } from '@/systems/debugFlags';
+import { TILE_SIZE } from '@/config/playerTuning';
+import { GAME_WIDTH } from '@/config/resolution';
 
 const THREE_FINGER_COUNT = 3;
+
+/** A named world-x landmark (checkpoint or beat) shown by the `near:` debug readout. */
+export interface DebugLandmark {
+  readonly id: string;
+  readonly x: number;
+}
 
 /**
  * F3 / three-finger-tap toggled debug view (M1 spec): hitboxes, state,
@@ -25,6 +33,7 @@ export class DebugOverlay {
     scene: Phaser.Scene,
     private readonly player: Player,
     private readonly targets: readonly TargetDummy[],
+    private readonly landmarks: readonly DebugLandmark[] = [],
   ) {
     this.worldGraphics = scene.add.graphics().setDepth(1900).setVisible(false);
     this.text = scene.add
@@ -96,7 +105,7 @@ export class DebugOverlay {
     }
 
     const info = this.player.debugInfo;
-    this.text.setText([
+    const lines = [
       `state: ${info.state}`,
       `vel: ${info.velocityX.toFixed(0)}, ${info.velocityY.toFixed(0)}`,
       `grounded: ${info.grounded}`,
@@ -104,8 +113,29 @@ export class DebugOverlay {
       `jumpBuf: ${info.jumpBufferActive}`,
       `dashBuf: ${info.dashBufferActive}`,
       `hp: ${this.player.hitPoints}`,
-    ]);
+    ];
+
+    // DEBUG TOOL ONLY (see src/systems/debugFlags.ts): world-position
+    // readouts for stage authoring, dev builds only.
+    if (debugBuildEnabled) {
+      const x = this.player.x;
+      const y = this.player.y;
+      lines.push(`pos: ${x.toFixed(0)}, ${y.toFixed(0)}`);
+      lines.push(`tile: ${Math.floor(x / TILE_SIZE)}, ${Math.floor(y / TILE_SIZE)}`);
+      lines.push(`screen: ${Math.floor(x / GAME_WIDTH) + 1}`);
+      const nearestId = this.nearestLandmarkId(x);
+      if (nearestId !== null) lines.push(`near: ${nearestId}`);
+    }
+
+    this.text.setText(lines);
 
     this.doubleJumpButton?.setText(`[DEBUG] dbl-jump: ${debugFlags.doubleJump ? 'ON' : 'OFF'}`);
+  }
+
+  private nearestLandmarkId(worldX: number): string | null {
+    if (this.landmarks.length === 0) return null;
+    return this.landmarks.reduce((nearest, landmark) =>
+      Math.abs(landmark.x - worldX) < Math.abs(nearest.x - worldX) ? landmark : nearest,
+    ).id;
   }
 }

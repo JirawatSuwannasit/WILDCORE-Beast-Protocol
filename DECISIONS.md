@@ -3,6 +3,38 @@
 Running log of deviations from `docs/GDD.md`, and judgment calls made where a requirement was
 ambiguous. One entry per decision, newest first.
 
+## Debug tool — world-position/tile/screen/landmark readouts
+
+- **Temporary debug aid - remove before v1.0.** The new `pos:`/`tile:`/`screen:`/`near:` lines in
+  `DebugOverlay` are for stage authoring/QA only, not part of the player kit or GDD design - same
+  category as the double-jump toggle above.
+- **Gated behind `debugBuildEnabled`, same two-guard pattern as the double-jump toggle.** The
+  lines are only pushed into the overlay's text array when `debugBuildEnabled` is true (local dev
+  and the `--mode debug` CI build); the existing state/vel/grounded/etc. lines are unaffected and
+  stay ungated. Verified headlessly against both a default `vite build` and `vite dev`: the four
+  new lines are entirely absent from the production overlay text and present/correct in the dev
+  one.
+- **Reused existing constants instead of duplicating magic numbers.** `tile:` divides by the
+  existing `TILE_SIZE` (`src/config/playerTuning.ts`); `screen:` divides by the existing
+  `GAME_WIDTH` (`src/config/resolution.ts`, already 320px, exactly GDD §2.6's screen-width unit)
+  rather than introducing a second 320 constant. `screen:` is reported 1-indexed (`screen: 1` at
+  the stage's leftmost screen) to match how the route-shape docs/DECISIONS entries above already
+  count screens.
+- **`near:` sources landmarks from both Tiled object layers, not just checkpoints.** The prompt
+  said "checkpoint/beat id" - `BaseStageScene` now builds one combined landmark list from the
+  `checkpoints` layer (already loaded) and the `sections` layer (the beat-tagged layer used
+  throughout `SpeedwayScene`/M2-REBUILD-2, e.g. `intro`, `escalation`, `midboss`), using each
+  object's Tiled `name` as the id and its x-center as position, and just picks whichever is
+  nearest by x - no separate "checkpoint vs. beat" precedence was needed since they already live
+  on the same horizontal axis. `GymScene` (no checkpoints/beats) passes none; the `near:` line
+  simply doesn't print when the landmark list is empty, rather than printing something empty or
+  `N/A`.
+- **No gameplay changes.** Everything here is additive to `DebugOverlay`'s text output and a new
+  optional 4th constructor parameter (default `[]`) - no scene logic, physics, or existing overlay
+  behavior changed. Confirmed via the full verification chain (typecheck/lint/format/test/build)
+  plus a headless Playwright check of the actual `pos`/`tile`/`screen`/`near` values against known
+  player coordinates in both build modes.
+
 ## M2-REBUILD-2 — Speedway Savanna re-authored for the route-shape (anti-corridor) rule
 
 - **What a "screen" means on each axis, made explicit.** §2.6 defines a screen as "one native view, 320px" - but the native view is 320×180, and only the *horizontal* dimension is 320px. Vertically, one native view is 180px. Read literally, a vertical "screen" of ascent/descent is therefore ~11.25 tiles (rounded to 12 for clean tile math, 192px), not 20 tiles/320px - "vertical shafts count by height" only makes sense as a distinct, shorter unit from the horizontal one, since a shaft's job is to fill the *vertical* extent of a viewport, not the horizontal one. Adopted 20 tiles (320px) per horizontal screen and 12 tiles (192px) per vertical screen throughout. This also explains why 34 screens now total ~9,216px instead of the ~10,880px a purely-horizontal 34-screen stage would produce: 13 of the 34 are the shorter vertical kind by design, not a shortfall.

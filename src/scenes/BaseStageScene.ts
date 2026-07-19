@@ -7,7 +7,7 @@ import { InputManager } from '@/systems/input';
 import { KeyboardInputSource } from '@/systems/inputSources/KeyboardInputSource';
 import { GamepadInputSource } from '@/systems/inputSources/GamepadInputSource';
 import { TouchInputSource } from '@/systems/inputSources/TouchInputSource';
-import { DebugOverlay } from '@/systems/debugOverlay';
+import { DebugOverlay, type DebugLandmark } from '@/systems/debugOverlay';
 import { CheckpointManager } from '@/systems/checkpoint';
 import { Player } from '@/actors/Player';
 import { Enemy } from '@/actors/Enemy';
@@ -174,7 +174,14 @@ export abstract class BaseStageScene extends BaseScene {
       })),
     ]);
 
-    this.debugOverlay = new DebugOverlay(this, this.player, []);
+    const landmarks: DebugLandmark[] = [
+      ...checkpointObjects.map((o) => ({ id: o.name, x: objectCenter(o).x })),
+      ...getObjectLayer(this.mapData, 'sections').map((o) => ({
+        id: o.name,
+        x: objectCenter(o).x,
+      })),
+    ];
+    this.debugOverlay = new DebugOverlay(this, this.player, [], landmarks);
   }
 
   // --- Setup helpers ---------------------------------------------------
