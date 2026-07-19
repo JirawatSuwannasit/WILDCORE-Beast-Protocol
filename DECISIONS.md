@@ -3,6 +3,84 @@
 Running log of deviations from `docs/GDD.md`, and judgment calls made where a requirement was
 ambiguous. One entry per decision, newest first.
 
+## M3 — Weapon system (GDD §5): 8 boss weapons, weakness wheel, utility tags
+
+- **Architecture mirrors the existing jumpPhysics.ts split.** `src/data/weaknessWheel.ts` and
+  `src/systems/weapons.ts` are pure TypeScript with zero Phaser import - a probe confirmed
+  importing `phaser` at all fails under this project's vitest+jsdom setup (`Not implemented:
+  HTMLCanvasElement's getContext()`), which is exactly why every already-tested module
+  (`checkpoint.ts`, `jumpPhysics.ts`, `edgeDetector.ts`, ...) avoids importing it. `weapons.ts`
+  holds the testable logic (energy bank, Q/E slot cycling, chain/splash/boomerang/DoT/ground-wave
+  math); the Phaser-side pooled sprites and dispatch live in `src/actors/WeaponController.ts` and
+  `src/actors/weapons/WeaponEffectSprite.ts`, verified by headless Playwright instead of Vitest,
+  same division of labor as `Player.ts` uses `jumpPhysics.ts`.
+- **"phase" is an inferred utility tag, not a literal GDD quote.** GDD §3 gives each of the other
+  7 weapons an explicit "Utility: ..." line (powers/douses/melts/freezes/cuts/corrodes/triggers).
+  Umbra Claw's entry never states one. "phase" is the only tag left over once the other seven are
+  read off, and it fits the weapon's own description ("dash-slash with i-frames" - passing through
+  danger untouched). Flagging the inference here rather than presenting it as a direct quote.
+- **All 8 weapons start unlocked.** GDD §2.1 gains weapons from boss defeats, but there is no
+  save/progression system yet (that's M8/M9 territory) to source real unlock state from.
+  `WeaponSlotCycle` takes an `isUnlocked` predicate (default: everything true) specifically so
+  real gating can be wired in later without touching the cycling logic itself.
+- **The shoot button fires whichever is equipped, buster included, in one Q/E ring.**
+  `WEAPON_SLOTS = ['buster', ...WEAPON_ORDER]` - GDD §2.2's "Weapon Wheel — quick-switch acquired
+  boss weapons" reads as a Mega-Man-style single equip slot, not a separate always-on buster.
+  `Player.fixedUpdate` gates `buster.fixedUpdate`'s `shootHeld` by `weapons.isBusterActive` so only
+  one system ever responds to a given press; `WeaponController`'s own fire-edge detector always
+  tracks the raw input unconditionally (not gated), so switching weapons mid-press can't misfire a
+  spurious shot.
+- **Energy values (GDD §2.3 names the resource but gives no numbers).** 28 max per weapon (the
+  genre's classic weapon-energy-bar convention), tracked independently per weapon so one doesn't
+  drain another. Costs and damage are tuned per weapon's fantasy in `config/weaponTuning.ts`
+  (Magma Charge/Umbra Claw cost more, matching their "carries you"/"high risk high reward" text);
+  full reasoning is in that file's inline comments.
+- **Magma Charge's carry and Umbra Claw's dash-slash both move the player directly**, via a new
+  `Player.applyWeaponCarry(velocityX, frames)` - a sibling to the existing `wallKickLockFrames`
+  forced-velocity pattern, kept as its own counter so a wall-kick and a weapon carry can never
+  silently cancel each other's timing. Umbra Claw's "10 i-frames" reuses the player's existing
+  `invulnFramesRemaining` window via a new `grantIFrames(frames)` - the same mechanism a hurt
+  respawn already grants, just without the accompanying damage/knockback, which also gives the
+  dash a free visual tell (the existing hurt-flicker) with no new code.
+- **Frost Talon's freeze is a separate static collider, not a repurposed enemy body.** Turning the
+  enemy's own AI-driven body into a walkable platform would mean fighting its own movement/gravity
+  code per enemy type. Instead `Enemy.freeze()` disables the enemy (invulnerable, zero velocity)
+  and enables a dedicated static "platform" body positioned over it, registered against the player
+  once per enemy up front (body starts disabled, cheap). `isMinor` (default true) gates it off for
+  bosses; `VoltCheetah` sets it false.
+- **Boomerang and ground-wave physics are simplified, not full path simulation.** Gale Cutter
+  reverses toward the thrower's *live* position once it passes `maxRangePx` (a homing return, for
+  feel, not a strict mirror of the outbound path) and self-catches within 10px. Terra Spike rides
+  the floor under gravity and turns to vertical exactly once, on real wall contact
+  (`body.blocked.left/right`, not a timer) - GDD's "travels floor -> walls" doesn't specify a
+  multi-turn path, and a single turn per cast reads clearly as "hits a wall, climbs it."
+- **A genuinely nasty bug, worth flagging for anyone touching `WeaponEffectSprite` later:** the
+  boomerang's launch-point fields were first named `originX`/`originY`. Phaser's own
+  `GameObject.originX`/`originY` (the normalized 0-1 anchor Arcade uses to compute
+  `displayOriginX`/`getTopLeft()`/body-position sync) share that exact name - assigning a world
+  coordinate to them silently corrupted every subsequent `body.reset()`/collision check on that
+  sprite (confirmed by reading `displayOriginX` mid-bug: it was showing the *fire position* in
+  pixels, not `0.5`). Every weapon-vs-enemy and weapon-vs-utility-target overlap silently never
+  fired until this was caught and the fields renamed to `launchX`/`launchY`. No other custom field
+  name in this codebase happens to collide with a Phaser `GameObject`/`Body` property, but it's a
+  sharp edge worth remembering: never name an instance field on a Phaser GameObject subclass
+  `x`/`y`/`originX`/`originY`/`width`/`height`/`angle`/etc. without checking first.
+- **Gym utility-tag test targets (GDD's explicit deliverable).** One target per tag: a generic
+  `UtilityTarget` placeholder for the six flag-flip tags (power/douse/melt/cut/corrode/quake), a
+  real `SparkBug` for "freeze" specifically (the only tag with a physical effect worth proving end
+  to end - freeze into a standable platform, then thaw), and the mismatched-weapon-does-nothing
+  case checked explicitly.
+- **Verification went well beyond typecheck/lint/test/build**, because a bug like the
+  originX/originY collision above only shows up when something actually overlaps in a live
+  browser: headless Playwright confirmed real Arcade collision/velocity for all 8 weapons, all 8
+  utility tags (including the freeze-into-platform mechanic and its ~3s thaw), Q/E ring cycling
+  and energy spend/block, the pause weapon wheel, and - the explicit "live example" this milestone
+  asked for - VoltCheetah's weakness hook: a non-weakness hit deals its own damage, the weakness
+  hit deals exactly the fixed 4 damage, and it interrupts a genuinely active dash mid-pattern
+  (zeroing velocity, entering `stunned`). Every pre-existing Speedway/M2 regression suite
+  (elevation, fork, ascent shaft, descent, checkpoints, full boss sequence) was re-run and still
+  passes. Zero console errors throughout.
+
 ## Investigation — pixel-crispness check (no code change)
 
 - **Question:** whether the render pipeline correctly integer-scales a 320x180 native pixel-art

@@ -11,6 +11,11 @@ import { TargetDummy } from '@/actors/TargetDummy';
 import { MovingPlatform } from '@/actors/MovingPlatform';
 import type { Projectile } from '@/actors/Projectile';
 import { DebugOverlay } from '@/systems/debugOverlay';
+import { UtilityTarget } from '@/actors/UtilityTarget';
+import { SparkBug } from '@/actors/enemies/SparkBug';
+import { EnemyProjectilePool } from '@/actors/EnemyProjectile';
+import type { WeaponEffectSprite } from '@/actors/weapons/WeaponEffectSprite';
+import type { UtilityTag } from '@/data/weaknessWheel';
 
 const LEVEL_HEIGHT = 180;
 const GROUND_TOP = 160;
@@ -29,7 +34,7 @@ const GROUND_SEGMENTS: Block[] = [
   { x: 166, width: 94 }, // after 1-tile gap
   { x: 292, width: 98 }, // after 2-tile gap
   { x: 438, width: 512 }, // after 3-tile gap: stairs, wall-kick shaft, spikes all sit on this run
-  { x: 1050, width: 350 }, // after the moving-platform gap: dummy area + end
+  { x: 1050, width: 510 }, // after the moving-platform gap: dummy area, then the utility-tag row
 ];
 
 const STAIRS_ORIGIN_X = 460;
@@ -54,6 +59,23 @@ const MOVING_PLATFORM_GAP = { left: 950, right: 1050 };
 
 const TARGET_DUMMY_X = 1180;
 
+// M3 (GDD §5): one test target per utility tag, laid out in a row past
+// the dummy - a real minor enemy for "freeze" (the only tag whose effect
+// is physical, not a simple flag flip) and a generic UtilityTarget for
+// the other seven.
+const UTILITY_ROW_START_X = 1250;
+const UTILITY_ROW_SPACING = 40;
+const UTILITY_TAG_ORDER: UtilityTag[] = [
+  'power',
+  'douse',
+  'melt',
+  'freeze',
+  'cut',
+  'corrode',
+  'quake',
+  'phase',
+];
+
 /**
  * Graybox test room for the Player controller (M1 spec): flat ground,
  * stairs, 1/2/3-tile gaps, a wall-kick shaft, spikes, a moving platform
@@ -68,6 +90,9 @@ export class GymScene extends BaseScene {
   private debugOverlay!: DebugOverlay;
   private hazards!: Phaser.Physics.Arcade.StaticGroup;
   private solids!: Phaser.Physics.Arcade.StaticGroup;
+  private utilityTargets!: UtilityTarget[];
+  private freezeDemo!: SparkBug;
+  private enemyBolts!: EnemyProjectilePool;
 
   constructor() {
     super('Gym');
@@ -76,7 +101,7 @@ export class GymScene extends BaseScene {
   create(): void {
     this.cameras.main.setBackgroundColor(THEME.background);
 
-    const levelWidth = MOVING_PLATFORM_GAP.right + 350;
+    const levelWidth = MOVING_PLATFORM_GAP.right + 510;
     this.physics.world.setBounds(0, 0, levelWidth, LEVEL_HEIGHT);
     this.cameras.main.setBounds(0, 0, levelWidth, LEVEL_HEIGHT);
 
@@ -108,6 +133,8 @@ export class GymScene extends BaseScene {
       (projectileObj) => this.onProjectileHitDummy(projectileObj as Projectile),
     );
 
+    this.buildUtilityRow();
+
     this.cameras.main.startFollow(this.player.visual, false, 0.15, 0.15);
     this.cameras.main.setDeadzone(40, 60);
 
@@ -133,10 +160,14 @@ export class GymScene extends BaseScene {
     const input = this.inputManager.sample();
     this.player.fixedUpdate(input);
     this.movingPlatform.fixedUpdate();
+    this.freezeDemo.fixedUpdate(this.player.x, this.player.y, this.enemyBolts);
     this.carryRiderIfOnPlatform();
 
     if (this.player.hitPoints <= 0 || this.player.y > LEVEL_HEIGHT + 200) {
       this.player.respawnAt(SPAWN_X, SPAWN_Y);
+    }
+    if (this.freezeDemo.y > LEVEL_HEIGHT + 200) {
+      this.freezeDemo.reset(UTILITY_ROW_START_X + 3 * UTILITY_ROW_SPACING, GROUND_TOP - 10);
     }
   }
 
@@ -144,8 +175,58 @@ export class GymScene extends BaseScene {
     super.update(time, delta);
     this.player.updateRenderPosition(this.renderAlpha);
     this.movingPlatform.updateRenderPosition(this.renderAlpha);
+    this.freezeDemo.updateRenderPosition(this.renderAlpha);
     this.touchSource.refreshVisuals();
     this.debugOverlay.refresh();
+    this.player.weapons.setPaused(this.isManuallyPaused);
+  }
+
+  /** M3 (GDD §5): one test target per utility tag - a real minor enemy for "freeze", a generic tag-flip target for the other seven. */
+  private buildUtilityRow(): void {
+    this.enemyBolts = new EnemyProjectilePool(this);
+    this.utilityTargets = [];
+
+    UTILITY_TAG_ORDER.forEach((tag, index) => {
+      const x = UTILITY_ROW_START_X + index * UTILITY_ROW_SPACING;
+      if (tag === 'freeze') {
+        this.freezeDemo = new SparkBug(this, x, GROUND_TOP - 10);
+        this.physics.add.collider(this.freezeDemo, this.solids);
+        this.physics.add.collider(this.player, this.freezeDemo.platformBody);
+        this.physics.add.overlap(
+          [...this.player.weapons.hitboxes],
+          this.freezeDemo,
+          (hitboxObj) => {
+            this.player.weapons.resolveEnemyHit(
+              hitboxObj as unknown as WeaponEffectSprite,
+              this.freezeDemo,
+              [this.freezeDemo],
+            );
+          },
+        );
+        this.physics.add.overlap(
+          [...this.player.buster.projectiles],
+          this.freezeDemo,
+          (projectileObj) => {
+            const projectile = projectileObj as unknown as Projectile;
+            if (!projectile.active || this.freezeDemo.isDead) return;
+            this.freezeDemo.takeDamage(projectile.damage);
+            projectile.deactivate();
+          },
+        );
+        return;
+      }
+
+      const target = new UtilityTarget(this, x, GROUND_TOP - 12, tag);
+      this.utilityTargets.push(target);
+      this.physics.add.overlap([...this.player.weapons.hitboxes], target, (hitboxObj) => {
+        this.player.weapons.resolveUtilityHit(hitboxObj as unknown as WeaponEffectSprite, target);
+      });
+    });
+
+    // Terra Spike (GDD §5) needs real ground/wall collision to know when to turn and climb.
+    this.physics.add.collider([...this.player.weapons.hitboxes], this.solids, (hitboxObj) => {
+      this.player.weapons.onGroundWaveWallContact(hitboxObj as unknown as WeaponEffectSprite);
+    });
   }
 
   private carryRiderIfOnPlatform(): void {

@@ -6,6 +6,7 @@ import { FrameWindow } from '@/systems/frameWindow';
 import { EdgeDetector } from '@/systems/edgeDetector';
 import { computeJumpVelocities, applyJumpCut } from '@/systems/jumpPhysics';
 import { BusterWeapon } from '@/actors/BusterWeapon';
+import { WeaponController } from '@/actors/WeaponController';
 import { InterpolatedPhysicsSprite } from '@/actors/InterpolatedPhysicsSprite';
 import type { InputSnapshot } from '@/systems/input';
 import { debugFlags } from '@/systems/debugFlags';
@@ -30,6 +31,7 @@ const { launchVelocity, cutVelocity } = computeJumpVelocities(
 export class Player extends InterpolatedPhysicsSprite {
   readonly hurtboxZone: Phaser.GameObjects.Zone;
   readonly buster: BusterWeapon;
+  readonly weapons: WeaponController;
 
   private facing: 1 | -1 = 1;
   private playerState: PlayerState = 'idle';
@@ -43,6 +45,14 @@ export class Player extends InterpolatedPhysicsSprite {
   private wallKickLockFrames = 0;
   private dashFramesRemaining = 0;
   private dashCooldownFrames = 0;
+
+  // GDD §5: Magma Charge's carry and Umbra Claw's dash-slash both force
+  // player movement for a short window, the same "additive locked
+  // velocity" pattern as wallKickLockFrames - kept as its own counter
+  // rather than reusing that one so a wall-kick and a weapon carry can
+  // never silently cancel each other's timing.
+  private weaponCarryFramesRemaining = 0;
+  private weaponCarryVelocityX = 0;
 
   // DEBUG TOOL ONLY (see src/systems/debugFlags.ts) - not part of the
   // player kit. Recharges on landing; consumed by performDebugDoubleJump,
@@ -82,6 +92,7 @@ export class Player extends InterpolatedPhysicsSprite {
     (this.hurtboxZone.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
 
     this.buster = new BusterWeapon(scene);
+    this.weapons = new WeaponController(scene);
   }
 
   get currentState(): PlayerState {
@@ -191,7 +202,10 @@ export class Player extends InterpolatedPhysicsSprite {
     this.updateDash(body, grounded);
 
     // --- Horizontal movement: constant speed, fixed air control, no acceleration curve. ---
-    if (this.wallKickLockFrames > 0) {
+    if (this.weaponCarryFramesRemaining > 0) {
+      this.weaponCarryFramesRemaining -= 1;
+      body.setVelocityX(this.weaponCarryVelocityX);
+    } else if (this.wallKickLockFrames > 0) {
       this.wallKickLockFrames -= 1;
     } else if (this.dashFramesRemaining <= 0) {
       body.setVelocityX(input.moveX * playerTuning.run.speed * this.speedMultiplier);
@@ -201,14 +215,26 @@ export class Player extends InterpolatedPhysicsSprite {
       this.facing = input.moveX;
     }
 
-    // --- Buster ---
+    // --- Buster / weapon wheel (GDD §2.2/§5): the shoot button fires whichever is currently equipped. ---
     const center = this.bodyCenter;
     const muzzleOffsetX = (playerTuning.size.width / 2 + 3) * this.facing;
+    const muzzleX = center.x + muzzleOffsetX;
+    const muzzleY = center.y - playerTuning.size.height * 0.15;
     this.buster.fixedUpdate(
-      input.shootHeld,
-      center.x + muzzleOffsetX,
-      center.y - playerTuning.size.height * 0.15,
+      this.weapons.isBusterActive && input.shootHeld,
+      muzzleX,
+      muzzleY,
       this.facing,
+    );
+    this.weapons.fixedUpdate(
+      input,
+      muzzleX,
+      muzzleY,
+      this.facing,
+      center.x,
+      center.y,
+      (velocityX, frames) => this.applyWeaponCarry(velocityX, frames),
+      (frames) => this.grantIFrames(frames),
     );
 
     this.syncHurtboxAndVisual();
@@ -225,6 +251,17 @@ export class Player extends InterpolatedPhysicsSprite {
   /** Scales horizontal run speed for the current step (GDD §3b speed strips); expires unless reapplied every frame. */
   applySpeedMultiplier(multiplier: number): void {
     this.speedMultiplier = multiplier;
+  }
+
+  /** GDD §5: Magma Charge's forward carry / Umbra Claw's dash-slash - forces horizontal velocity for `frames`, overriding normal input. */
+  applyWeaponCarry(velocityX: number, frames: number): void {
+    this.weaponCarryVelocityX = velocityX;
+    this.weaponCarryFramesRemaining = frames;
+  }
+
+  /** GDD §5: Umbra Claw's "10 i-frames" - reuses the same invulnerability window a hurt-recovery grants, just without the damage/knockback that normally comes with it. */
+  grantIFrames(frames: number): void {
+    this.invulnFramesRemaining = Math.max(this.invulnFramesRemaining, frames);
   }
 
   /** Bypasses invulnerability entirely (GDD §3b hazard matrix: spikes are always lethal). */

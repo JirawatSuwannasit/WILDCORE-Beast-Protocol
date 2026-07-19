@@ -4,6 +4,7 @@ import { getRectTexture } from '@/systems/placeholderTexture';
 import { voltCheetahTuning } from '@/config/bossTuning';
 import { Enemy } from '@/actors/Enemy';
 import type { EnemyProjectilePool } from '@/actors/EnemyProjectile';
+import { isWeakness, type WeaponId } from '@/data/weaknessWheel';
 
 const SIZE = { width: 22, height: 18 };
 const IDLE_FRAMES = 45;
@@ -64,6 +65,7 @@ export class VoltCheetah extends Enemy {
     this.arenaRight = arenaRight;
     this.floorY = y;
     this.invulnerable = true; // during the fill ritual
+    this.isMinor = false; // GDD §3.4: Frost Talon freezes only minor enemies, not bosses
 
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setGravityY(voltCheetahTuning.wallPounce.gravity);
@@ -89,7 +91,8 @@ export class VoltCheetah extends Enemy {
     this.framesRemaining = Math.round(voltCheetahTuning.fillRitualMs / (1000 / 60));
   }
 
-  takesWeakness(_weaponId: string): void {
+  /** GDD §5: weak to Umbra Claw - 4 damage + interrupt (including mid-dash) + reaction, regardless of current pattern. */
+  takesWeakness(_weaponId: WeaponId): void {
     if (this.isDead || this.bossFsmState === 'ritual' || this.bossFsmState === 'defeated') return;
     this.takeDamage(voltCheetahTuning.weaknessDamage);
     if (this.isDead) return;
@@ -97,6 +100,15 @@ export class VoltCheetah extends Enemy {
     this.enterState('stunned', WEAKNESS_STUN_FRAMES);
     (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
     this.sweepHazard.setVisible(false);
+  }
+
+  /** Live wiring of the weakness wheel (GDD §5): any weapon hit routes here; Umbra Claw gets the weakness treatment, everything else is normal damage. */
+  applyWeaponHit(weaponId: WeaponId, damage: number): void {
+    if (isWeakness(weaponId, 'voltCheetah')) {
+      this.takesWeakness(weaponId);
+    } else {
+      this.takeDamage(damage);
+    }
   }
 
   protected onDeath(): void {

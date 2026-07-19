@@ -33,6 +33,7 @@ export class TurretSunflower extends Enemy {
   fixedUpdate(playerX: number, playerY: number, bolts: EnemyProjectilePool): void {
     this.captureRenderStep();
     if (this.isDead) return;
+    if (this.tickFrozen()) return;
 
     this.phaseFramesRemaining -= 1;
     if (this.phaseFramesRemaining > 0) return;

@@ -71,6 +71,10 @@ export class PatrolDrone extends Enemy {
       this.lens.setVisible(false);
       return;
     }
+    if (this.tickFrozen()) {
+      this.lens.setVisible(false);
+      return;
+    }
 
     const body = this.body as Phaser.Physics.Arcade.Body;
 
