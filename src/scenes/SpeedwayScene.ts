@@ -27,9 +27,6 @@ const BOSS_ROOM_CAMERA_Y = BOSS_ROOM_FLOOR_Y - 20;
 // starts while the shutter is still visibly sliding down.
 const BOSS_DOOR_SEAL_MS = 600;
 const WEAPON_GET_STUB_MS = 2600;
-// Camera lerp while following normally (matches BaseStageScene's own
-// startFollow call) - restored when the player leaves a vertical shaft zone.
-const NORMAL_CAMERA_LERP = 0.15;
 
 /** GDD §3.1/§3b/§4: Speedway Savanna - the M2 stage. */
 export class SpeedwayScene extends BaseStageScene {
@@ -41,8 +38,6 @@ export class SpeedwayScene extends BaseStageScene {
   private bossDoor: BossDoor | null = null;
   private bossRoomEntered = false;
   private stageComplete = false;
-  private ascentShaftZone: Phaser.GameObjects.Zone | null = null;
-  private inAscentShaft = false;
 
   protected readonly entityRegistry: Record<string, EntitySpawner> = {
     sparkBug: (_scene, x, y) => {
@@ -126,7 +121,7 @@ export class SpeedwayScene extends BaseStageScene {
     ascentShaftZone: (_scene, x, y, object) => {
       const zone = this.add.zone(x, y, object.width, object.height);
       this.physics.add.existing(zone, true);
-      this.ascentShaftZone = zone;
+      this.registerVerticalCameraZone(zone);
     },
   };
 
@@ -146,38 +141,6 @@ export class SpeedwayScene extends BaseStageScene {
   protected fixedUpdate(): void {
     if (this.stageComplete) return;
     super.fixedUpdate();
-    this.updateAscentShaftCamera();
-  }
-
-  /**
-   * GDD §2.6 "vertical camera zones for shafts (X-style)": while inside
-   * the pylon ascent shaft, lock the camera's horizontal scroll to the
-   * shaft's center and let it keep following vertically, so the climb
-   * never scrolls sideways out from under the player. A zero X-lerp is
-   * what does the locking - `startFollow` (already running from
-   * BaseStageScene) computes scrollX += (target-scrollX)*lerpX each
-   * frame, so lerpX=0 leaves scrollX exactly where it was set the
-   * instant the zone was entered, every frame, with no extra bookkeeping.
-   */
-  private updateAscentShaftCamera(): void {
-    if (!this.ascentShaftZone || this.cameraLockedForBoss()) return;
-    const overlapping = this.physics.overlap(this.player.hurtboxZone, this.ascentShaftZone);
-    const camera = this.cameras.main;
-
-    if (overlapping && !this.inAscentShaft) {
-      this.inAscentShaft = true;
-      const zoneBody = this.ascentShaftZone.body as Phaser.Physics.Arcade.StaticBody;
-      camera.scrollX = zoneBody.center.x - camera.width / 2;
-      camera.setLerp(0, NORMAL_CAMERA_LERP);
-    } else if (!overlapping && this.inAscentShaft) {
-      this.inAscentShaft = false;
-      camera.setLerp(NORMAL_CAMERA_LERP, NORMAL_CAMERA_LERP);
-    }
-  }
-
-  /** True once the boss-room shutter has sealed and the full camera lock (GDD §4) has taken over. */
-  private cameraLockedForBoss(): boolean {
-    return this.bossRoomEntered;
   }
 
   /** Boss-room-only respawn override (GDD ambiguity - see DECISIONS.md M2): dying mid-fight

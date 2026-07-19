@@ -3,6 +3,75 @@
 Running log of deviations from `docs/GDD.md`, and judgment calls made where a requirement was
 ambiguous. One entry per decision, newest first.
 
+## Bugfix (P1) — camera let the player get too close to / off the screen edge at transitions
+
+- **Root cause #1 (the actual GDD §2.6 violation): no hard floor under the deadzone/lerp follow.**
+  `BaseStageScene` only ever used Phaser's soft `startFollow` + `setDeadzone(30, 60)` + a 0.15 lerp -
+  correct for ordinary walking speed, but nothing stopped the player from outrunning it during fast
+  motion (a free-fall down a descent chute, a forced-velocity current push, a wall-kick chain) and
+  ending up jammed against - or briefly past - a viewport edge before the lerp caught up. Fixed with
+  `enforceCameraSafetyMargin()`, a hard clamp on `camera.scrollX/scrollY` (32px horizontal / 24px
+  vertical margin) that runs every real frame, after every other camera-affecting update (look-ahead
+  offset, vertical-zone pan/lock, subclass boss-room lock) but *before* Phaser's own
+  `preRender()`/render pass consumes those values - confirmed via `node_modules/phaser`'s own source
+  that `Systems.step()` (which calls `Scene.update()`) always runs before `Systems.render()`
+  (which calls `Camera.preRender()`), and that `preRender()` reads `this.scrollX`/`this.scrollY`
+  fresh at the top of every call - so a same-frame correction here is guaranteed to land before
+  anything is drawn, not one frame late. Skipped while `cameraLocked` (a boss/mid-boss arena's fixed
+  framing is intentional, already sized to keep the player in view). The 32px/24px margins are
+  smaller than the deadzone's own half-extents in the common case, so under normal walking speed the
+  soft deadzone reacts before the hard clamp would ever need to - it only ever engages during the
+  fast-motion cases described above, verified live (see below).
+- **Root cause #2 (a real, separate bug this investigation found in Reservoir's own map generator):
+  the ascent shaft's registered camera-lock zone never covered its own bottom half.** `addEntity()`
+  takes a *center* point and converts it to Tiled's top-left convention internally - the ascent-shaft
+  zone's placement call passed a value that was meant to be roughly the shaft's *top edge* as if it
+  were the *center*, which (combined with the zone's real height) pinned the zone's computed bottom
+  edge to the shaft's vertical *midpoint*, not its actual bottom entry ledge. In practice this meant
+  the vertical camera lock (§2.6: "vertical camera zones for shafts... lock per arena") silently
+  never engaged for the lower half of the real climb - exactly the kind of transition the bug report
+  named ("around screen 18 / setpiece... vertical-zone... handoffs"). Fixed by computing the zone's
+  true center as the midpoint between the shaft's real top and bottom rows
+  (`(ascentShaftTopRow + ascentShaftBottomRow) / 2`), not passing an edge value directly. Caught by
+  reasoning through `addEntity`'s own center-to-top-left conversion after a live Playwright trace
+  showed a teleported player free-falling through open air where solid shaft geometry should have
+  been - not by guessing.
+- **Root cause #3 (a genuine, if smaller, UX rough edge): the vertical-zone's horizontal lock was an
+  instant `camera.scrollX = ...` snap, not a transition.** A player crossing the zone boundary
+  off-center from the shaft's true midpoint got a same-frame jump-cut in scroll position. Replaced
+  with a 220ms `Sine.easeOut` tween to the shaft's center (the X-lerp is still zeroed immediately on
+  entry, which is what actually *holds* the lock in place afterward - the tween only smooths getting
+  there). Composes correctly with the Tween Manager's own per-frame update running before
+  `Scene.update()` (confirmed via `Systems.step()`'s event order: `PRE_UPDATE`/`UPDATE`, which drives
+  tweens, fires before `sceneUpdate.call(...)`, my own `update()` override).
+- **De-duplicated the vertical-camera-zone mechanism into `BaseStageScene` itself.** It was
+  previously copy-pasted near-verbatim between `SpeedwayScene` and `ReservoirScene`
+  (`ascentShaftZone`/`inAscentShaft`/`updateAscentShaftCamera`) - both bugs above would otherwise
+  have needed fixing twice, and any future stage would inherit the same duplication risk. Now a
+  single `protected registerVerticalCameraZone(zone)` + private `updateVerticalCameraZone()` on
+  `BaseStageScene`; both scenes' `ascentShaftZone` entity spawners just call the shared registration
+  method. `SpeedwayScene`'s own map/zone data is untouched (only genuinely correct already, per the
+  audit below) - this is a pure refactor for it, not a data fix.
+- **Audited every other Reservoir zone/object placed via a `rowTopY(...)` expression for the same
+  center-vs-top-left mistake** (the multi-floor gates, several `current` zones, the mid-boss/boss
+  room triggers, the boss door) - all of the others correctly compute a true center (either via an
+  explicit `+ height/2` offset, or by construction), only the ascent-shaft zone had the bug. Logged
+  here rather than silently re-deriving each one from scratch, since a second undiscovered instance
+  of the same mistake was the realistic risk worth checking for.
+- **Verification.** Typecheck/lint/format/110 tests/build all clean. Live-browser (temporary
+  `window.__debugGame` hook, reverted before commit): (1) general traversal margin-compliance checks
+  on both Reservoir (fast free-fall through a descent chute, running through the remix/branch region)
+  and Speedway (running through the tutorial/fork region) - zero real violations, only a single
+  unavoidable one-frame artifact immediately after an instant test-harness teleport (self-corrects by
+  the very next frame, and doesn't occur during real continuous gameplay, which never teleports); (2)
+  a dedicated stress test that drives the player through the *entire* vertical-camera-zone's real
+  height at 400px/s (faster than any realistic wall-kick chain or free-fall speed in this stage),
+  sampling every real frame - zero margin violations across the full climb, confirming both the zone
+  fix and the safety clamp hold under sustained fast vertical motion, not just the general case.
+  Scripted precision wall-kick-chain input via Playwright remains unreliable (same documented
+  limitation as Speedway's own shaft) - the direct-drive stress test above is what actually gives
+  confidence here instead.
+
 ## M4.1 — Coral Reservoir (GDD §3.2 / §2.6 / §3b): the second full stage
 
 - **Route shape is DESCENT-dominant by design, not just "meets the minimums."** The 35-screen
