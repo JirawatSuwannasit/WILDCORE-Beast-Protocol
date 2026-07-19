@@ -8,6 +8,7 @@ import { computeJumpVelocities, applyJumpCut } from '@/systems/jumpPhysics';
 import { BusterWeapon } from '@/actors/BusterWeapon';
 import { InterpolatedPhysicsSprite } from '@/actors/InterpolatedPhysicsSprite';
 import type { InputSnapshot } from '@/systems/input';
+import { debugFlags } from '@/systems/debugFlags';
 
 export type PlayerState = 'idle' | 'run' | 'jump' | 'fall' | 'wallSlide' | 'dash' | 'hurt';
 
@@ -42,6 +43,11 @@ export class Player extends InterpolatedPhysicsSprite {
   private wallKickLockFrames = 0;
   private dashFramesRemaining = 0;
   private dashCooldownFrames = 0;
+
+  // DEBUG TOOL ONLY (see src/systems/debugFlags.ts) - not part of the
+  // player kit. Recharges on landing; consumed by performDebugDoubleJump,
+  // which is only ever reached when debugFlags.doubleJump is true.
+  private debugExtraJumpUsed = false;
 
   private invulnFramesRemaining = 0;
   private hitstunFramesRemaining = 0;
@@ -136,6 +142,7 @@ export class Player extends InterpolatedPhysicsSprite {
     // --- Coyote time: only counts down while airborne; grounded frames keep it fully armed. ---
     if (grounded) {
       this.coyoteTimer.arm(playerTuning.jump.coyoteFrames);
+      this.debugExtraJumpUsed = false; // DEBUG TOOL ONLY - recharge on landing
     } else {
       this.coyoteTimer.tick();
     }
@@ -155,6 +162,11 @@ export class Player extends InterpolatedPhysicsSprite {
         this.performJump(body);
       } else if (onWall) {
         this.performWallKick(body, touchingWallLeft);
+      } else if (debugFlags.doubleJump && !this.debugExtraJumpUsed) {
+        // DEBUG TOOL ONLY - never reached unless explicitly toggled on via
+        // the debug overlay in a dev/debug build; a strict sibling branch,
+        // not a change to any of the paths above.
+        this.performDebugDoubleJump(body);
       }
     }
 
@@ -250,6 +262,13 @@ export class Player extends InterpolatedPhysicsSprite {
     body.setVelocityY(launchVelocity);
     this.jumpBuffer.consume();
     this.coyoteTimer.consume();
+  }
+
+  /** DEBUG TOOL ONLY - testing traversal reachability, not a real ability (see src/systems/debugFlags.ts). */
+  private performDebugDoubleJump(body: Phaser.Physics.Arcade.Body): void {
+    body.setVelocityY(launchVelocity);
+    this.jumpBuffer.consume();
+    this.debugExtraJumpUsed = true;
   }
 
   private performWallKick(body: Phaser.Physics.Arcade.Body, wasTouchingLeftWall: boolean): void {
