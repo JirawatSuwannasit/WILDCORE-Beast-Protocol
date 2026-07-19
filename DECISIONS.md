@@ -3,6 +3,41 @@
 Running log of deviations from `docs/GDD.md`, and judgment calls made where a requirement was
 ambiguous. One entry per decision, newest first.
 
+## M2-REBUILD-2 — Speedway Savanna re-authored for the route-shape (anti-corridor) rule
+
+- **What a "screen" means on each axis, made explicit.** §2.6 defines a screen as "one native view, 320px" - but the native view is 320×180, and only the *horizontal* dimension is 320px. Vertically, one native view is 180px. Read literally, a vertical "screen" of ascent/descent is therefore ~11.25 tiles (rounded to 12 for clean tile math, 192px), not 20 tiles/320px - "vertical shafts count by height" only makes sense as a distinct, shorter unit from the horizontal one, since a shaft's job is to fill the *vertical* extent of a viewport, not the horizontal one. Adopted 20 tiles (320px) per horizontal screen and 12 tiles (192px) per vertical screen throughout. This also explains why 34 screens now total ~9,216px instead of the ~10,880px a purely-horizontal 34-screen stage would produce: 13 of the 34 are the shorter vertical kind by design, not a shortfall.
+- **Screen budget stayed put; only the shape changed.** Kept the exact beat-to-screen allocation from M2-REBUILD (intro 3, tutorial 5, escalation 5, mid-boss 1, remix 6, setpiece 5, breather 2, final exam 5, pre-boss 2 = 34 screens) and the same §3b enemy/hazard roster and density targets - this pass only touched *where* those screens sit in 2D space, per the prompt's own scope ("this pass fixes the LAYOUT SHAPE only").
+- **The route is authored as a per-screen direction sequence, verified mechanically, not eyeballed.** Every one of the 34 screens is tagged R/U/D up front; a generator script walks the sequence building tiles, and prints the axis-mix percentage, the longest same-direction run, and the direction-change count on every run - the same discipline as M2-REBUILD's hazard-debut-ordering check, because at this scale (94 rows × 606 columns, 6 kinds of special geometry) eyeballing the numbers is not credible. Final sequence: `RRUDRRURRRDRRRUUURRRDDDRDRRRURDRRR` - 38.2% vertical (target ≥35%), longest run 3 (target ≤3), 17 direction changes (target ≥4).
+- **A real, code-derived elevation bug caught by hand-tracing wrong, then fixed by trusting the generator's own state instead of re-deriving it.** The first placement pass hand-computed "what row should this hazard sit at" independently of what the tile-builder actually did, and got it wrong (forgot that the intro beat's own trailing ascent already shifts the baseline before the tutorial beat even starts) - entities ended up floating over empty air. Fixed by having every screen the walk processes push a `{colStart, colEnd, row}` segment as it's built, and having all later entity/hazard placement code look up its row from that segment log instead of recomputing it from tuning constants. Added a placement-validation pass (every ground-anchored entity/checkpoint/pickup cross-checked against the actual tile data) that must pass before the generator writes the file - it caught not just that bug but several follow-on ones (an electric-fence debut landing 8 tiles from a spikes debut inside the fork span - a hazard-debut-ordering violation - and a camera-zone marker whose y went negative after the grid-normalizing row shift).
+- **Mandatory ascent shaft:** the solar-pylon climb is exactly 3 consecutive U-tagged screens (36 tiles / 576px), reached right after the mid-boss arena (thematically, climbing the same pylon the twin drones circle) and opening onto a bridge-crossing plateau at the top. A `vertical camera zone` locks the camera's horizontal scroll to the shaft's center for the climb's duration (X-lerp set to 0, which is what makes `startFollow`'s own per-frame `scrollX += (target-scrollX)*lerpX` hold scrollX exactly still - no separate override system needed) and releases back to normal 2-axis follow on exit.
+- **Controlled descent:** the boost-strip setpiece descends through 4 D-tagged screens with staged intermediate landings (2 per descent screen, offset left/right) rather than a single sheer drop, so every fall has a visible landing before the next one - satisfying "readable landings, no blind drops" without needing a bespoke slide/chute mechanic.
+- **Branch & rejoin:** the turbine-tower fork opens with a short ascent (1 screen) into a 3-screen parallel span - an upper band of broken blade-platforms (patrol drone, pickup, precision jumps) and a lower band of continuous ground (the electric fence's debut) - and the upper band's floor simply stops 10 tiles before the span ends, so an upper-route player free-falls onto the lower band to rejoin; no separate "rejoin shaft" geometry was needed.
+- **Multi-floor room:** the underpass breather is two full-width bands (obvious upper floor with drop-through gaps, continuous lower floor) converging at the same exit column. The Legs Capsule secret was moved off the old design's single wall-kick shaft in an otherwise ordinary breather stretch onto a short hidden alcove branching off the *lower* (less-obvious) floor specifically, matching the new rule's "secrets branch off the less obvious side" - a floor a casual player is more likely to have already dropped through and left behind than to backtrack into.
+- **Boss room elevation moved.** The path's net elevation change over its whole length is +1 vertical screen (start baseline → one screen lower by the boss door - the ascent and descents don't cancel to exactly zero), so `BOSS_ROOM_FLOOR_Y`/`BOSS_ROOM_CAMERA_Y` in `SpeedwayScene.ts` needed updating again, same as the previous rebuild's lesson: these are read from the generated map's own object data, not hand-derived, specifically to avoid re-making that mistake.
+
+### Route map (34 screens; `#` = path elevation, one column per screen)
+
+```
+-3 |                ####              |
+-2 |               #    #             |
+-1 |  #   ####    #      #            |
++0 |## ###    ####        ##    ##    |
++1 |                        ####  ####|
+   +----------------------------------+
+```
+
+| Screens | Beat | Tags | Notes |
+|---|---|---|---|
+| 1-3 | Intro | RRU | Safe, sells the theme; ends on a small themed rise |
+| 4-8 | Gimmick tutorial | DRRUR | Speed strip debuts harmless; ends at the turbine-tower fork entrance |
+| 9-13 | Escalation | RRDRR | Fork's parallel span + rejoin; spikes debut, gimmick+enemies combine |
+| 14 | Mid-boss arena | R | Twin patrol drones around the pylon → checkpoint |
+| 15-20 | Remix | UUURRR | **Mandatory ascent shaft**: 3-screen solar-pylon climb, then bridges on the plateau |
+| 21-25 | Setpiece | DDDRD | **Controlled descent**: boost-strip chase down through staged landings → checkpoint |
+| 26-27 | Breather + secret | RR | **Multi-floor room**; Legs Capsule branches off the lower floor |
+| 28-32 | Final exam | RURDR | Hardest combination of everything taught |
+| 33-34 | Pre-boss corridor | RR | Energy pickups → checkpoint → boss room |
+
 ## Docs sync — GDD route-shape (anti-corridor) rule + PO Playbook added
 
 - **`docs/GDD.md`** synced with the new §2.6 "Route shape (anti-corridor rule)" subsection and a per-stage "Route shape" bullet in §3.1–3.8 (branch-and-rejoin, a mandatory wall-kick ascent shaft, a controlled descent, and a multi-floor room per stage, ≥35% of path length vertical). Diffed byte-for-byte against the uploaded source to confirm this is the only change - nothing else in the GDD moved.
