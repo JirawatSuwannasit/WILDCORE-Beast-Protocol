@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { THEME } from '@/config/theme';
 import type { Player } from '@/actors/Player';
 import type { TargetDummy } from '@/actors/TargetDummy';
+import { debugBuildEnabled, debugFlags, toggleDebugDoubleJump } from '@/systems/debugFlags';
 
 const THREE_FINGER_COUNT = 3;
 
@@ -16,6 +17,7 @@ export class DebugOverlay {
   private active = false;
   private readonly worldGraphics: Phaser.GameObjects.Graphics;
   private readonly text: Phaser.GameObjects.Text;
+  private readonly doubleJumpButton: Phaser.GameObjects.Text | null;
   private readonly activePointerIds = new Set<number>();
   private threeFingerTriggered = false;
 
@@ -30,6 +32,26 @@ export class DebugOverlay {
       .setScrollFactor(0)
       .setDepth(1900)
       .setVisible(false);
+
+    // DEBUG TOOL ONLY (see src/systems/debugFlags.ts): a tappable toggle
+    // for testing traversal, only ever created/interactive in a dev/debug
+    // build - `toggleDebugDoubleJump` itself is also a no-op outside one,
+    // so this is a second, independent guard, not the only one.
+    this.doubleJumpButton = debugBuildEnabled
+      ? scene.add
+          .text(scene.scale.width - 6, 16, '', {
+            fontFamily: 'monospace',
+            fontSize: '9px',
+            color: THEME.textCream,
+            backgroundColor: '#000000',
+          })
+          .setOrigin(1, 0)
+          .setScrollFactor(0)
+          .setDepth(1900)
+          .setVisible(false)
+          .setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => toggleDebugDoubleJump())
+      : null;
 
     scene.input.keyboard?.on('keydown-F3', () => this.toggle());
 
@@ -50,6 +72,7 @@ export class DebugOverlay {
     this.active = !this.active;
     this.worldGraphics.setVisible(this.active);
     this.text.setVisible(this.active);
+    this.doubleJumpButton?.setVisible(this.active);
   }
 
   /** Call once per render frame, after positions are finalized for this frame. */
@@ -82,5 +105,7 @@ export class DebugOverlay {
       `dashBuf: ${info.dashBufferActive}`,
       `hp: ${this.player.hitPoints}`,
     ]);
+
+    this.doubleJumpButton?.setText(`[DEBUG] dbl-jump: ${debugFlags.doubleJump ? 'ON' : 'OFF'}`);
   }
 }

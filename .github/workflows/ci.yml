@@ -70,7 +70,11 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v3
       - run: npm ci
-      - run: npm run build
+      # Debug-only build mode (see src/systems/debugFlags.ts) so dev tools
+      # like the F3-overlay double-jump toggle are reachable in this APK
+      # but never in the default `npm run build` used by Vercel preview
+      # and the eventual signed release AAB.
+      - run: npm run build:debug
       - run: npx cap sync android
       - name: Build debug APK
         working-directory: android
