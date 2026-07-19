@@ -3,6 +3,51 @@
 Running log of deviations from `docs/GDD.md`, and judgment calls made where a requirement was
 ambiguous. One entry per decision, newest first.
 
+## Bugfix — Speedway gaps exceeding base-kit jump reach (GDD §2.5 pillar 1 / §2.2)
+
+- **The violation, and how it was found.** A flat-ground jump has a hard physics ceiling: with
+  `gravity=900`, `run.speed=90`, and a max-height jump (`maxHeightTiles=3.5` → launch velocity
+  `-√(2·900·56) ≈ -317.5px/s`), full flight time to a level landing is `2·317.5/900 ≈ 0.706s`,
+  giving a maximum level-ground jump reach of `90·0.706 ≈ 63.5px ≈ 3.97 tiles` - and a wall-kick
+  (140px/s kick burst for 6 frames, then 90px/s) does only marginally better, `≈68.5px ≈ 4.28
+  tiles`. Wrote a script to scan every column of `speedway.json`'s ground layer for the topmost
+  solid tile, group runs of fully-empty columns into gaps, and compare each gap's required
+  horizontal distance against these two ceilings (adjusted for elevation delta between the takeoff
+  and landing edges). Found **7 gaps wider than either ceiling** - all a generator artifact from
+  M2-REBUILD-2, not an intentional design choice (nothing in `DECISIONS.md` or the PR #11 writeup
+  describes these as deliberate skill gates, and no speed-strip or other assist sits near any of
+  them).
+- **Fixes applied, before → after (all widths in tiles; `flat` = D=0, same-height landing):**
+
+  | Location | Before | After | Fix |
+  |---|---|---|---|
+  | Intro rise (cols 40-49) | 12-tile **sheer vertical wall** (192px, no ledge) feeding into an 8-tile flat gap | 6-step staircase (2 tiles/step, matches the guaranteed *min* jump height exactly) + 3-tile flat gap | Re-tiled: added 5 intermediate step columns, narrowed the gap |
+  | Tutorial gap (cols 107-114) | 8-tile flat | 3-tile flat | Filled 5 of 8 gap columns |
+  | Escalation/fork lower-band gap (cols 176-185) | 10-tile flat, **inside the band `DECISIONS.md` already documents as "continuous ground"** | 0 (fully closed) | Filled all 10 columns - narrowing wouldn't have matched the band's own documented "continuous, safe route" identity |
+  | Final-exam gap (cols 481-488) | 8-tile flat | 3-tile flat | Filled 5 of 8 gap columns |
+  | Ascent shaft, all 3 climbing bands (cols 247-254 / 257-264 / 267-274) | 8-tile **wall-kick corridor** per band (68.5px max kick reach vs. 128px required - impossible even with the wall-kick that's supposed to be mandatory here) | 3-tile corridor per band | Filled the innermost 5 of 8 open columns per band, keeping the outer (already-shared, zigzag-connecting) wall untouched |
+
+  All narrowed values land at 48px required vs. 63.5-68.5px available (~30-40% margin) - not
+  pixel-perfect, no dash required (still locked). The two existing 4-tile *descending* gaps (cols
+  60-63, cols 520-523 - landing 8 rows lower, which extends flight time) were re-checked and left
+  alone: 64px required vs. ~89-94px available, already comfortably safe.
+- **Verified against real physics/collision, not just the formula.** Headless Playwright against a
+  live dev build: teleported the player to the approach side of each of the 4 non-shaft fixes and
+  ran a real run+jump (hold right, tap jump) through actual Arcade collision - all 4 landed clean.
+  For the shaft, teleported the player airborne against each band's (new) left wall and triggered a
+  real `performWallKick` - confirmed each of the 3 narrowed bands is crossable with a single kick,
+  landing on the correct band's wall. (A full bottom-to-top *chained* multi-kick climb, scripted via
+  simulated key timing, didn't cleanly reproduce in the harness - not a geometry problem, since
+  each individual band and the tile data between them checked out with no structural obstruction,
+  but real chained-kick *timing* is a feel/skill question a keyboard-scripted harness can't stand in
+  for. Same caveat PR #11 already flagged for this shaft: needs a real device playtest.)
+- **Re-ran every pre-existing route-shape regression** (elevation-band collision, fork upper/lower
+  hazard spacing, ascent-shaft camera lock, descent landing count, Legs Capsule pickup, checkpoint
+  order/respawn, full boss sequence, ~18s real-input traversal smoke) after the tile edits - all
+  still pass, zero console errors. Map dimensions, section boundaries, and checkpoint count are
+  byte-identical to before (only tile GIDs inside existing columns changed - no columns added or
+  removed, so §2.6's screen count and route shape are untouched).
+
 ## Debug tool — world-position/tile/screen/landmark readouts
 
 - **Temporary debug aid - remove before v1.0.** The new `pos:`/`tile:`/`screen:`/`near:` lines in
