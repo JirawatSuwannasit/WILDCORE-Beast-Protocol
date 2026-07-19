@@ -3,6 +3,36 @@
 Running log of deviations from `docs/GDD.md`, and judgment calls made where a requirement was
 ambiguous. One entry per decision, newest first.
 
+## Investigation — pixel-crispness check (no code change)
+
+- **Question:** whether the render pipeline correctly integer-scales a 320x180 native pixel-art
+  canvas, or whether the softness visible in the placeholder UI is a scaling/filtering bug
+  affecting all rendering.
+- **Finding: render pipeline is correct; the softness is entirely category (a) - placeholder
+  system text, not a scaling bug.** Confirmed every relevant setting in `src/config/gameConfig.ts`:
+  `pixelArt: true`, `antialias: false`, `roundPixels: true`, `scale.mode: Phaser.Scale.FIT` +
+  `zoom: Phaser.Scale.MAX_ZOOM` (integer-only zoom, already documented under "Integer-zoom scaling"
+  above), plus `image-rendering: pixelated` on the canvas element in `index.html` as a CSS-layer
+  backstop. `getRectTexture` (the placeholder-sprite generator) draws solid-fill rectangles via
+  `Graphics.generateTexture`, which have no internal edges to anti-alias.
+- **Verified visually, not just by reading config.** Headless Playwright screenshot at a 3x integer
+  zoom (960x540 viewport, exact 16:9): the Title scene's placeholder rectangle and a tight crop on
+  the Gym scene's player sprite both show pixel-perfect hard edges with zero blur. The "WILDCORE"
+  and "TAP TO START" labels in the same screenshot are visibly anti-aliased - this is the same
+  frame, same renderer, same zoom, so the difference is the content, not the pipeline.
+- **Why text looks different even though it's drawn through the same crisp pipeline.** Every text
+  string in the codebase (`grep` across `src/` - debug overlay, title, stage select, pause banner,
+  touch button labels, target-dummy HP) goes through Phaser's standard `scene.add.text(...)` with
+  `fontFamily: 'monospace'`. Phaser rasterizes `Text` game objects via the browser's native
+  `CanvasRenderingContext2D.fillText` onto an offscreen texture first, then draws that texture like
+  any sprite - so the anti-aliasing is baked into the source pixels of the text texture by the
+  browser's font renderer, before the pixel-art pipeline ever touches it. `pixelArt`/`antialias`/
+  `roundPixels` govern how existing texture pixels are *sampled and positioned*, not how a texture
+  gets *rasterized* in the first place, so they can't and don't affect this. This exactly matches
+  what the GDD already schedules: the placeholder system font is a stand-in until the M8 UI-kit
+  pixel bitmap font (rasterized as fixed pixel glyphs, no font-engine anti-aliasing) replaces it.
+- **No action taken.** No config or art changes - this was a confirm-only check per the request.
+
 ## Bugfix — Speedway gaps exceeding base-kit jump reach (GDD §2.5 pillar 1 / §2.2)
 
 - **The violation, and how it was found.** A flat-ground jump has a hard physics ceiling: with
