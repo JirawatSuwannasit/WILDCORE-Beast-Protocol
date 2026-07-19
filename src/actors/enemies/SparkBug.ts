@@ -34,6 +34,10 @@ export class SparkBug extends Enemy {
       this.spark.setVisible(false);
       return;
     }
+    if (this.tickFrozen()) {
+      this.spark.setVisible(false);
+      return;
+    }
 
     const body = this.body as Phaser.Physics.Arcade.Body;
     const center = this.bodyCenter;

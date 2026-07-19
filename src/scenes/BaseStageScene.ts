@@ -146,6 +146,27 @@ export abstract class BaseStageScene extends BaseScene {
         projectile.deactivate();
       },
     );
+    // GDD §5: any boss weapon vs. any enemy - bosses that implement a
+    // weakness (see VoltCheetah.applyWeaponHit) get it for free here,
+    // same as every future stage's boss will.
+    this.physics.add.overlap(
+      [...this.player.weapons.hitboxes],
+      this.enemies,
+      (hitboxObj, enemyObj) => {
+        this.player.weapons.resolveEnemyHit(
+          hitboxObj as unknown as import('@/actors/weapons/WeaponEffectSprite').WeaponEffectSprite,
+          enemyObj as unknown as Enemy,
+          this.enemies,
+        );
+      },
+    );
+    // Terra Spike (GDD §5: "ground wave that travels floor->walls") needs
+    // real ground/wall collision to know when to turn and climb.
+    this.physics.add.collider([...this.player.weapons.hitboxes], this.groundLayer, (hitboxObj) => {
+      this.player.weapons.onGroundWaveWallContact(
+        hitboxObj as unknown as import('@/actors/weapons/WeaponEffectSprite').WeaponEffectSprite,
+      );
+    });
     this.physics.add.overlap(
       this.player.hurtboxZone,
       [...this.enemyBolts.projectiles],
@@ -272,6 +293,10 @@ export abstract class BaseStageScene extends BaseScene {
   registerEnemy(enemy: Enemy, spawnX: number, spawnY: number): void {
     this.enemies.push(enemy);
     this.enemySpawns.set(enemy, { x: spawnX, y: spawnY });
+    // Frost Talon (GDD §3.4): the platform an enemy stands in for while
+    // frozen - registered once per enemy, up front, since the body
+    // starts disabled and only ever activates for the freeze's duration.
+    this.physics.add.collider(this.player, enemy.platformBody);
   }
 
   // --- Per-frame ---------------------------------------------------------
