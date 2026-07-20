@@ -3,6 +3,112 @@
 Running log of deviations from `docs/GDD.md`, and judgment calls made where a requirement was
 ambiguous. One entry per decision, newest first.
 
+## M2 — Speedway Savanna re-audited against the axis-flexible §2.6/§3.1 revision
+
+- **Doc sync landed directly on `main` (not via a docs PR from this session).** `docs/GDD.md` and
+  `docs/PO_PLAYBOOK.md` were replaced/renamed on `main` (commits `2923855`/`0112918`/`4a838fd`/
+  `f999736`/`04bf257`) before this task started. Read the new §2.6/§2.7/§3.1 text directly off
+  `origin/main` and confirmed it matches the prompt's description (axis-flexible vertical target,
+  "at least TWO of three" structural elements, branch & rejoin mandatory regardless of axis,
+  Speedway declared horizontal-dominant) before touching anything - same "read the real file, don't
+  act on a described diff" discipline as the earlier-session GDD.md refusal.
+- **What changed vs. the previous M2-AUDIT-REBUILD (PR #23).** That build was correct for the
+  *old* §2.6 (35% vertical floor, all three structural elements effectively expected) - it built a
+  real 3-screen wall-kick ascent shaft up the solar pylon as a structural element. Under the new
+  axis-flexible rule, Speedway is HORIZONTAL-DOMINANT: §3.1 now explicitly says "a tall ascent shaft
+  is NOT required here - keep the pace horizontal" and names DESCENT + MULTI-FLOOR as the stage's two
+  structural elements. Removed the mandatory 3-leg shaft from the remix beat entirely (replaced with
+  fast, mostly-flat plateau screens plus a real collapsing-bridge gap crossing) and rebuilt the
+  multi-floor breather from 2 decks to 3 shallow decks per the prompt's explicit ask ("stack 2-3
+  shallow road decks... still missing" - see below for why "still missing" was taken at face value
+  rather than argued with). A single short wall-kick leg was kept in finalExam purely as texture
+  (GDD §3.1: "short wall-kick climbs are fine as texture"), not counted as a structural element and
+  not given its own vertical-camera zone (unlike the old structural shaft, which had one).
+- **"Still missing" taken at face value even though a 2-deck multi-floor room already existed and
+  passed every mechanical check.** A raw-tile scan of the pre-existing (merged) map confirmed the old
+  2-tier room was genuinely there (upper road with 2 drop-through gaps, continuous lower drainage
+  floor) - not a repeat of the earlier "zone marker but no real geometry" problem. Rather than push
+  back on the PO's "still missing" framing, read it as "the existing 2-deck version doesn't read as a
+  substantial enough multi-floor moment now that it's one of only 2 declared structural elements
+  instead of one of three" and rebuilt it as 3 shallow decks (top/mid/bottom, each deck's floor only
+  6 rows/96px from the next, so the whole room stays exactly as short as the old 2-deck version - "it
+  does NOT need a tall map" from the prompt, honored literally) with the top and mid decks' drop-
+  gaps deliberately offset from each other so falling through the top always lands on solid mid floor
+  first, and continuing down from mid is a separate, deliberate choice - a genuine "player picks a
+  layer, then picks again" moment rather than one drop-through to the bottom.
+- **A real, previously-undetected design gap fixed while rebuilding the collapsing-bridge crossing.**
+  The old remix beat's 3 `collapsingBridge` hazard objects sat decoratively on top of an already-fully
+  -solid `screenR` floor - `CollapsingBridgeTile` is a standalone static body independent of the
+  ground tile layer (confirmed by reading the actor source), so with solid ground underneath, the
+  bridge "collapsing" never had any real consequence: the player just stood on the ground tile
+  underneath regardless. New `screenRBridge` primitive builds an actual `SAFE_GAP_TILES`-wide pit
+  with no ground tile at all, spanned by one real `collapsingBridge` hazard - now a real hazard
+  instead of a visual-only prop. Not something the prompt asked for explicitly, but a direct
+  consequence of touching this beat anyway and reading the actor's actual behavior rather than
+  assuming the old placement was meaningful.
+- **Anti-corridor floor re-verified after removing the shaft, not assumed to still pass.** Deleting 3
+  U-tagged shaft screens from remix and replacing them with flat/R screens immediately created an
+  8-consecutive-same-direction run (escalation's tail + mid-boss + all-flat remix) - caught by the
+  generator's own `validateRouteShape` throwing before any manual review was needed. Fixed by giving
+  remix one real short dip (`stairDescent`) and one real short rise (`stairAscent`) - textured
+  "elevation spikes" per the stage's own flavor text, not a disguised ascent shaft (each is a single
+  gentle staircase leg, not a wall-kick gap). A second, subtler violation - 4 consecutive REAL
+  (320px) screens sitting at a near-identical surface height in the finalExam→preboss tail, since the
+  removed shaft's real-screen-level elevation contribution was gone and nothing replaced it -
+  was caught by the surface-variation check (not the direction-run check, which was already passing)
+  and fixed with one small safe dip (`stairDescent`, no hazards) added to preboss instead of leaving
+  it pure-flat.
+- **Vertical % ended up at 40%, well above the new 20% horizontal-dominant floor - left as-is rather
+  than trimmed further.** GDD §2.6 states the axis target as a floor ("target ≥20%"), not a ceiling,
+  and doesn't ask for vertical content to be minimized - only that a tall *ascent shaft* isn't
+  mandatory and the stage isn't required to be tall. The boost-strip descent (one of the two declared
+  structural elements) is inherently a large one-way elevation loss by design, the same way
+  Reservoir's descent is allowed to be tall; over-trimming everything else to chase a lower number
+  would have fought the anti-corridor floor rule (which is unchanged and still requires real
+  elevation variation) for no requirement-driven reason. The map is taller in raw tiles than the old
+  ascent-shaft version (622×144 vs. 622×96) purely as a side effect of net downhill drift (many more
+  D-tagged screens than U-tagged ones with nothing to climb back up) - not a violation of anything in
+  §2.6/§2.7, but noted here since it looks counterintuitive for a stage whose whole point is "not
+  required to be tall."
+- **`SpeedwayScene.ts`'s `BOSS_ROOM_FLOOR_Y`** updated again (1222 → 1990), read from the regenerated
+  map's own `bossSpawn` object-center Y, same discipline as every prior rebuild.
+- **Verification.** Raw-tile scans confirmed: the bridge-gap pit is exactly 3 tiles wide with the
+  collapsing-bridge tile positioned over real empty space; the 3-tier multi-floor room's top/mid/
+  bottom decks and their offset drop-gaps match the design exactly; the Legs Capsule's wall-kick
+  pillars still reach the floor. Live headless-Playwright checks (two checkpoint-anchored sweeps,
+  since a naive bot can't itself execute a wall-kick chain - the same documented harness limitation
+  as prior rebuilds) traversed the new remix content, the bridge crossing (died once to bad timing,
+  correctly respawned - an unskilled bot not dodging a timed hazard, not a geometry bug), and the
+  full 3-tier multi-floor room cleanly. One earlier "stuck against a wall" result during ad hoc
+  testing turned out to be a bad teleport coordinate landing the test player inside the entry wall's
+  own pillar, not a real bug - re-verified with the exact checkpoint coordinates and it traversed
+  fine; kept here as a reminder to trust the raw-tile data over an unverified teleport guess.
+- **§2.7 report:**
+  - Declared axis: **HORIZONTAL-DOMINANT**. Vertical path: **40%** (14/35 screens U/D-tagged) -
+    above the 20% floor. Longest same-direction run: 3. Direction changes: 22.
+  - Structural elements (2 of 3, per the axis-flexible rule): **CONTROLLED DESCENT** (boost-strip
+    setpiece) at real screens **18-21**; **MULTI-FLOOR ROOM** (3 shallow decks) at real screens
+    **22-23**. Ascent shaft NOT used as a structural element; one short wall-kick leg kept as texture
+    at real screen 26 (finalExam), no vertical-camera zone (texture only, not a structural shaft).
+  - **BRANCH & REJOIN** (turbine tower, mandatory for every stage regardless of axis): fork at real
+    screen **9**, rejoin by real screen **10** - unchanged from the previous rebuild (this beat wasn't
+    touched; already independently verified as two real, physically separate tile paths).
+  - Collapsing-bridge gap crossing (now a real hazard, not decorative): real screen 15.
+  - Legs Capsule (no weapon gate): real screen 24.
+  - Motif variety: 10 distinct ground shapes (`flat`, `stairAscent`, `stairDescent`, `gap`, `branch`,
+    `bridgeGap`, `boostDescent`, `sheerDescent`, `multiFloor`, `shaft`), longest same-motif run 3.
+  - Content variety: 0 consecutive-identical-signature violations; density 1.75 screens/encounter
+    (20/35); gimmick through-line touches beats 2, 5, 6 (setpiece), 8 (finalExam).
+  - Fairness: every gap (wall-kick, flat, or bridge) is exactly 3 tiles (48px, the proven-safe base-
+    kit value). Base-kit clearable throughout, no dash required.
+  - Map: 622×144 tiles (9,952×2,304px), up from 622×96 (see the vertical-% note above for why).
+- **Per-real-screen surface row** (raw tile scan, `min` = topmost solid tile row in that 320px
+  screen):
+  `[{"screen":1,"min":44},{"screen":2,"min":44},{"screen":3,"min":32},{"screen":4,"min":32},{"screen":5,"min":32},{"screen":6,"min":44},{"screen":7,"min":44},{"screen":8,"min":32},{"screen":9,"min":32},{"screen":10,"min":32},{"screen":11,"min":47},{"screen":12,"min":53},{"screen":13,"min":53},{"screen":14,"min":53},{"screen":15,"min":65},{"screen":16,"min":65},{"screen":17,"min":53},{"screen":18,"min":53},{"screen":19,"min":65},{"screen":20,"min":77},{"screen":21,"min":83},{"screen":22,"min":101},{"screen":23,"min":101},{"screen":24,"min":103},{"screen":25,"min":113},{"screen":26,"min":101},{"screen":27,"min":101},{"screen":28,"min":113},{"screen":29,"min":113},{"screen":30,"min":125},{"screen":31,"min":125}]`
+  (longest near-flat run: 2 real screens, comfortably under the 3-screen limit.)
+- **Auto-merge intentionally left off this PR** per the request - please audit the regenerated JSON
+  before merging, same as the previous rebuild.
+
 ## M2-AUDIT-REBUILD — Speedway Savanna terrain rebuilt to the §2.6/§2.7/§3.1 standard
 
 - **Speedway predates §2.7 and was always hand-authored JSON.** Unlike Coral Reservoir

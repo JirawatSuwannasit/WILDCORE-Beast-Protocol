@@ -1,21 +1,35 @@
 // Generator for Speedway Savanna's Tiled JSON map (GDD §2.6/§2.7/§3.1,
-// M2-AUDIT-REBUILD). Speedway predates §2.7 and was always hand-authored
-// JSON (no generator ever existed for it, unlike Reservoir's
-// generate-reservoir-map.mjs) - an independent audit found it fails
-// several §2.7 items despite M2-REBUILD-2's route-shape claims: the map
-// is only ~8.4 screens tall with surface varying ~4.3 screens (well
-// under the 35% vertical-path rule), the "ascent shaft" and "multi-floor
-// room" markers exist as zone/section objects but not as real stacked
-// ground geometry, and the turbine-tower fork is not present as two
-// physically separate tile paths. This generator re-authors the ground
-// layer from scratch using the same screen-shape-primitive + mechanical
-// validation discipline Reservoir's M4.1-REBUILD-2/3 established, kept
-// DISTINCT from Reservoir's shape per the prompt (no water, no valves -
-// speed strips / electric fences / collapsing bridges / patrol drones /
-// turret sunflowers / spark bugs, high-speed horizontal with vertical
-// spikes rather than a deep vertical descent). The existing enemy/hazard/
-// checkpoint roster and 9-beat structure are kept; only the terrain and
-// route shape change.
+// M2-AUDIT-REBUILD, then re-audited against the axis-flexible §2.6/§3.1
+// revision). Speedway predates §2.7 and was always hand-authored JSON (no
+// generator ever existed for it, unlike Reservoir's
+// generate-reservoir-map.mjs).
+//
+// DECLARED AXIS: HORIZONTAL-DOMINANT (GDD §3.1: "the counterpoint to
+// Reservoir's vertical descent... a tall ascent shaft is NOT required
+// here - keep the pace horizontal"). Under the axis-flexible rule,
+// horizontal-dominant stages target >=20% vertical path (not 35%) and
+// pick 2 of the 3 structural elements to fit their theme instead of all
+// three being forced. Speedway uses DESCENT (the boost-strip setpiece)
+// + MULTI-FLOOR (the highway underpass breather) - no mandatory ascent
+// shaft. A single short wall-kick leg is kept in finalExam purely as
+// texture ("short wall-kick climbs are fine as texture" - GDD §3.1),
+// not counted as a structural element.
+//
+// The anti-corridor floor rule (no >3 consecutive same-direction
+// screens, >=4 direction changes, surface not a monotonic slope) and the
+// BRANCH & REJOIN rule (mandatory for every stage regardless of axis)
+// still apply in full - re-verified below, not relaxed just because the
+// vertical floor dropped.
+//
+// This generator re-authors the ground layer from scratch using the same
+// screen-shape-primitive + mechanical validation discipline Reservoir's
+// M4.1-REBUILD-2/3 established, kept DISTINCT from Reservoir's shape per
+// the prompt (no water, no valves - speed strips / electric fences /
+// collapsing bridges / patrol drones / turret sunflowers / spark bugs,
+// high-speed horizontal with elevation spikes rather than a deep
+// vertical descent). The existing boss, enemy/hazard roster, checkpoint
+// count/order, and 9-beat structure are kept; only the terrain and route
+// shape change.
 
 import fs from 'node:fs';
 
@@ -81,13 +95,19 @@ const PLAN = [
   { dir: 'R', motif: 'flat' },
   // Beat 4: Mid-boss (1) - twin patrol drones circling the pylon -> checkpoint.
   { dir: 'R', motif: 'flat' },
-  // Beat 5: Remix (6) - MANDATORY ASCENT SHAFT: 3 real wall-kick legs up
-  // the solar pylon, then a bridge-crossing plateau (collapsing bridge debut).
-  { dir: 'U', motif: 'shaft' },
-  { dir: 'U', motif: 'shaft' },
-  { dir: 'U', motif: 'shaft' },
+  // Beat 5: Remix (6) - horizontal-dominant: no ascent shaft here (that's
+  // not one of Speedway's 2 declared structural elements). Fast, mostly
+  // flat plateau screens with the collapsing-bridge debut (a REAL gap
+  // spanned by a temporary tile, not decorative), a plain gap for ground-
+  // shape variety, and one short dip + rise (the flavor text's "elevation
+  // spikes") purely to satisfy the anti-corridor no->3-same-direction
+  // floor rule (still mandatory regardless of axis) - not a structural
+  // ascent shaft.
   { dir: 'R', motif: 'flat' },
-  { dir: 'R', motif: 'flat' },
+  { dir: 'D', motif: 'stairDescent' },
+  { dir: 'R', motif: 'bridgeGap' },
+  { dir: 'R', motif: 'gap' },
+  { dir: 'U', motif: 'stairAscent' },
   { dir: 'R', motif: 'flat' },
   // Beat 6: Setpiece (5) - high-speed downhill BOOST-STRIP DESCENT, staged
   // wide landings (distinct rhythm from the tutorial/escalation stair).
@@ -97,8 +117,9 @@ const PLAN = [
   { dir: 'D', motif: 'boostDescent' },
   { dir: 'D', motif: 'sheerDescent' },
   // Beat 7: Breather (3) - MULTI-FLOOR highway underpass (2 real screens,
-  // stacked road/drainage layers), Legs Capsule off the lower (less
-  // obvious) layer via a wall-kick chain.
+  // 3 shallow stacked road/drainage decks - the stage's other declared
+  // structural element), Legs Capsule off the lowest (least obvious)
+  // deck via a wall-kick chain.
   { dir: 'D', motif: 'multiFloor' },
   { dir: 'R', motif: 'multiFloor' },
   { dir: 'R', motif: 'flat' },
@@ -109,8 +130,11 @@ const PLAN = [
   { dir: 'R', motif: 'flat' },
   { dir: 'D', motif: 'stairDescent' },
   { dir: 'R', motif: 'flat' },
-  // Beat 9: Pre-boss (2) - energy pickups -> checkpoint -> boss room.
-  { dir: 'R', motif: 'flat' },
+  // Beat 9: Pre-boss (2) - energy pickups -> checkpoint -> boss room. A
+  // small safe dip (no hazards) rather than pure flat - the tail end of
+  // the stage otherwise sits at one elevation for too many consecutive
+  // REAL (320px) screens once the shaft is gone from remix.
+  { dir: 'D', motif: 'stairDescent' },
   { dir: 'R', motif: 'flat' },
 ];
 
@@ -162,9 +186,15 @@ function validateRouteShape(sequence) {
 }
 const stats = validateRouteShape(SEQUENCE);
 console.log('Route-shape stats (direction):', stats);
+// Horizontal-dominant axis target (GDD §2.6 axis-flexible rule): >=20%,
+// not the 35% vertical-dominant floor Reservoir uses.
+const VERTICAL_PCT_FLOOR = 20;
 if (stats.total < 28 || stats.total > 36)
   throw new Error(`screen count ${stats.total} outside 28-36`);
-if (stats.verticalPct < 35) throw new Error(`vertical% ${stats.verticalPct} below 35`);
+if (stats.verticalPct < VERTICAL_PCT_FLOOR)
+  throw new Error(
+    `vertical% ${stats.verticalPct} below the horizontal-dominant floor of ${VERTICAL_PCT_FLOOR}`,
+  );
 if (stats.maxRun > 3) throw new Error(`max same-direction run ${stats.maxRun} exceeds 3`);
 if (stats.changes < 4) throw new Error(`direction changes ${stats.changes} below 4`);
 
@@ -209,6 +239,36 @@ function screenR(colEnd, row) {
 
 /** motif 'gap': flat floor split by one SAFE_GAP_TILES-wide pit - a highway with a broken section, not a descent. */
 function screenRGap(colEnd, row) {
+  const gapStart =
+    cursor.col + Math.floor((colEnd - cursor.col) / 2) - Math.floor(SAFE_GAP_TILES / 2);
+  const gapEnd = gapStart + SAFE_GAP_TILES;
+  fillFloor(cursor.col, gapStart, row);
+  fillFloor(gapEnd, colEnd, row);
+  const seg = {
+    colStart: cursor.col,
+    colEnd,
+    row,
+    rowEnter: row,
+    rowExit: row,
+    gap: { left: gapStart, right: gapEnd },
+  };
+  cursor.col = colEnd;
+  return seg;
+}
+
+/**
+ * motif 'bridgeGap': flat floor split by a REAL SAFE_GAP_TILES-wide pit,
+ * distinct from plain 'gap' - the pit has no ground tile under it at all
+ * (unlike the old hand-authored map, which placed collapsingBridge hazard
+ * objects decoratively on top of already-solid ground, so the "collapse"
+ * never actually mattered). The generator only builds the ground shape
+ * here; the caller adds the collapsingBridge hazard object spanning the
+ * gap, which is a real solid platform in its own right (see
+ * CollapsingBridgeTile - a standalone static body, not tied to the
+ * ground tile layer) that disables itself for a while after being
+ * triggered.
+ */
+function screenRBridge(colEnd, row) {
   const gapStart =
     cursor.col + Math.floor((colEnd - cursor.col) / 2) - Math.floor(SAFE_GAP_TILES / 2);
   const gapEnd = gapStart + SAFE_GAP_TILES;
@@ -754,100 +814,101 @@ segments[12] = screenDStair(cursor.col + V_COLS, cursor.row);
 }
 
 // =====================================================================
-// Beat 5: Remix (15-20) - MANDATORY ASCENT SHAFT: 3 real wall-kick legs
-// up the solar pylon (36 tiles / 576px), then a bridge-crossing plateau
-// (collapsing bridge debut).
+// Beat 5: Remix (15-20) - horizontal-dominant: fast, mostly flat plateau
+// screens. No ascent shaft (not one of Speedway's 2 declared structural
+// elements - see the file header). The collapsing-bridge debut is a REAL
+// gap now (see screenRBridge), not a decorative hazard sitting on solid
+// ground.
 // =====================================================================
-const ascentShaftColStart = cursor.col;
-segments[15] = screenUShaft(cursor.col + V_COLS, cursor.row);
-addEntity(
-  'turretSunflower',
-  'turretSunflower-shaft-lower',
-  tileCenterX(segments[15].colStart + 2),
-  standingY(segments[15].rowEnter),
-  16,
-  16,
-);
-tagEnemy(15, 'turretSunflower');
-
-segments[16] = screenUShaft(cursor.col + V_COLS, cursor.row);
-addEntity(
-  'patrolDrone',
-  'patrolDrone-shaft-mid',
-  tileCenterX(segments[16].colEnd - 2),
-  rowTopY(segments[16].rowExit) - 20,
-  16,
-  16,
-);
-tagEnemy(16, 'patrolDrone');
-
-segments[17] = screenUShaft(cursor.col + V_COLS, cursor.row);
-const ascentShaftColEnd = cursor.col;
-addEntity(
-  'sparkBug',
-  'sparkBug-shaft-top',
-  tileCenterX(segments[17].colStart + 2),
-  standingY(segments[17].rowEnter),
-  16,
-  16,
-);
-tagEnemy(17, 'sparkBug');
-
-const ascentShaftTopRow = segments[17].rowExit - 4;
-const ascentShaftBottomRow = segments[15].rowEnter + 6;
-addEntity(
-  'ascentShaftZone',
-  'pylonAscentShaftZone',
-  tileCenterX((ascentShaftColStart + ascentShaftColEnd) / 2),
-  rowTopY((ascentShaftTopRow + ascentShaftBottomRow) / 2),
-  (ascentShaftColEnd - ascentShaftColStart) * TILE,
-  (ascentShaftBottomRow - ascentShaftTopRow) * TILE,
-);
-const ascentRangeStart = 15;
-const ascentRangeEnd = 17;
-
 {
   const s = screenR(cursor.col + H_COLS, cursor.row);
-  segments[18] = s;
-  const bridgeColStart = s.colStart + 6;
-  for (let i = 0; i < 3; i += 1) {
-    addHazard(
-      'collapsingBridge',
-      `bridge-remix-${i + 1}`,
-      tileCenterX(bridgeColStart + i * 3),
-      standingY(s.row),
-      48,
-      16,
-    );
-  }
-  tagGimmick(18, 'collapsingBridge');
-}
-{
-  const s = screenR(cursor.col + H_COLS, cursor.row);
-  segments[19] = s;
+  segments[15] = s;
   addEntity(
     'turretSunflower',
-    'turretSunflower-remix',
-    tileCenterX(s.colStart + 8),
+    'turretSunflower-remix-entry',
+    tileCenterX(s.colStart + 6),
     standingY(s.row),
     16,
     16,
   );
   addEntity(
     'patrolDrone',
-    'patrolDrone-remix',
+    'patrolDrone-remix-entry',
     tileCenterX(s.colStart + 14),
-    rowTopY(s.row) - 48,
+    rowTopY(s.row) - 40,
     16,
     16,
   );
-  tagEnemy(19, 'turretSunflower');
+  tagEnemy(15, 'turretSunflower');
 }
+
+segments[16] = screenDStair(cursor.col + V_COLS, cursor.row);
+addEntity(
+  'sparkBug',
+  'sparkBug-remix-dip',
+  tileCenterX(segments[16].treads[2].col),
+  standingY(segments[16].treads[2].row),
+  16,
+  16,
+);
+tagEnemy(16, 'sparkBug');
+
+{
+  const s = screenRBridge(cursor.col + H_COLS, cursor.row);
+  segments[17] = s;
+  addHazard(
+    'collapsingBridge',
+    'bridge-remix-1',
+    tileCenterX((s.gap.left + s.gap.right) / 2),
+    standingY(s.row),
+    (s.gap.right - s.gap.left) * TILE,
+    16,
+  );
+  addEntity('energyPickup', 'pickup-remix-1', tileCenterX(s.colEnd - 3), standingY(s.row), 16, 16);
+  tagGimmick(17, 'collapsingBridge');
+}
+
+segments[18] = screenRGap(cursor.col + H_COLS, cursor.row);
+addEntity(
+  'patrolDrone',
+  'patrolDrone-remix-gap',
+  tileCenterX(segments[18].gap.left - 3),
+  rowTopY(segments[18].row) - 40,
+  16,
+  16,
+);
+tagEnemy(18, 'patrolDrone');
+
+segments[19] = screenUStair(cursor.col + V_COLS, cursor.row);
+addEntity(
+  'turretSunflower',
+  'turretSunflower-remix-2',
+  tileCenterX(segments[19].treads[0].col),
+  standingY(segments[19].treads[0].row),
+  16,
+  16,
+);
+addEntity(
+  'patrolDrone',
+  'patrolDrone-remix-2',
+  tileCenterX(segments[19].treads[3].col),
+  rowTopY(segments[19].treads[3].row) - 40,
+  16,
+  16,
+);
+tagEnemy(19, 'turretSunflower');
 {
   const s = screenR(cursor.col + H_COLS, cursor.row);
   segments[20] = s;
-  addEntity('sparkBug', 'sparkBug-remix', tileCenterX(s.colStart + 8), standingY(s.row), 16, 16);
-  addEntity('energyPickup', 'pickup-remix', tileCenterX(s.colStart + 14), standingY(s.row), 16, 16);
+  addEntity('sparkBug', 'sparkBug-remix-2', tileCenterX(s.colStart + 8), standingY(s.row), 16, 16);
+  addEntity(
+    'energyPickup',
+    'pickup-remix-2',
+    tileCenterX(s.colStart + 14),
+    standingY(s.row),
+    16,
+    16,
+  );
   tagEnemy(20, 'sparkBug');
 }
 
@@ -947,37 +1008,51 @@ addCheckpoint(
 
 // =====================================================================
 // Beat 7: Breather (26-28) - REAL multi-floor highway underpass: 2 real
-// screens of stacked road (upper)/drainage-crawl (lower) layers, player
-// picks a layer via drop-through gaps. Legs Capsule off the LOWER (less
-// obvious) layer via a wall-kick chain.
+// screens, 3 SHALLOW stacked road/drainage decks (not a tall room - each
+// deck is only 6 rows/96px apart, so the whole structure stays as short
+// as the old 2-deck version while adding a genuine middle layer). Player
+// picks a layer via drop-through gaps; top and mid gaps are offset from
+// each other so falling through the top always lands on solid mid floor
+// first - a deliberate second choice, not a straight fall to the bottom.
+// Legs Capsule off the LOWEST (least obvious) deck via a wall-kick chain.
 // =====================================================================
 {
   const colStart = cursor.col;
   const colEnd = cursor.col + H_COLS * 2;
   const topRow = cursor.row;
+  const midRow = topRow + 6;
   const botRow = topRow + V_COLS;
   // Entry/exit backstops start at their own floor's row, not above it -
   // same bug class fixed repeatedly in Reservoir's rebuilds.
   fillWall(colStart, colStart + 2, topRow, botRow + FILL_DEPTH);
   fillWall(colEnd - 2, colEnd, botRow, botRow + FILL_DEPTH);
 
-  // Upper road: mostly continuous, with two drop-through gaps so a
-  // player can choose to fall to the lower crawl at will.
-  const gap1Start = colStart + 12;
-  const gap1End = gap1Start + SAFE_GAP_TILES;
-  const gap2Start = colStart + 26;
-  const gap2End = gap2Start + SAFE_GAP_TILES;
-  fillFloor(colStart + 2, gap1Start, topRow, 0);
-  fillFloor(gap1End, gap2Start, topRow, 0);
-  fillFloor(gap2End, colEnd - 2, topRow, 0);
+  // Top deck: two drop-through gaps to the mid deck.
+  const topGap1Start = colStart + 8;
+  const topGap1End = topGap1Start + SAFE_GAP_TILES;
+  const topGap2Start = colStart + 24;
+  const topGap2End = topGap2Start + SAFE_GAP_TILES;
+  fillFloor(colStart + 2, topGap1Start, topRow, 0);
+  fillFloor(topGap1End, topGap2Start, topRow, 0);
+  fillFloor(topGap2End, colEnd - 2, topRow, 0);
 
-  // Lower drainage crawl: fully continuous, the safe/slow floor.
+  // Mid deck: two drop-through gaps to the bottom deck, offset from the
+  // top deck's gaps (falling through top always lands on solid mid).
+  const midGap1Start = colStart + 15;
+  const midGap1End = midGap1Start + SAFE_GAP_TILES;
+  const midGap2Start = colStart + 31;
+  const midGap2End = midGap2Start + SAFE_GAP_TILES;
+  fillFloor(colStart + 2, midGap1Start, midRow, 0);
+  fillFloor(midGap1End, midGap2Start, midRow, 0);
+  fillFloor(midGap2End, colEnd - 2, midRow, 0);
+
+  // Bottom drainage crawl: fully continuous, the safe/slow floor.
   fillFloor(colStart + 2, colEnd - 2, botRow);
 
   addEntity(
     'turretSunflower',
     'turretSunflower-multifloor-top',
-    tileCenterX(colStart + 8),
+    tileCenterX(colStart + 4),
     standingY(topRow),
     16,
     16,
@@ -985,8 +1060,24 @@ addCheckpoint(
   addEntity(
     'energyPickup',
     'pickup-multifloor-top',
-    tileCenterX(gap2End + 4),
+    tileCenterX(topGap2End + 4),
     standingY(topRow),
+    16,
+    16,
+  );
+  addEntity(
+    'patrolDrone',
+    'patrolDrone-multifloor-mid',
+    tileCenterX(colStart + 22),
+    rowTopY(midRow) - 24,
+    16,
+    16,
+  );
+  addEntity(
+    'energyPickup',
+    'pickup-multifloor-mid',
+    tileCenterX(colStart + 6),
+    standingY(midRow),
     16,
     16,
   );
@@ -1010,19 +1101,21 @@ addCheckpoint(
   segments[26] = {
     colStart,
     colEnd: colStart + H_COLS,
-    row: botRow,
+    row: midRow,
     rowEnter: topRow,
-    rowExit: botRow,
+    rowExit: midRow,
     topRow,
+    midRow,
     botRow,
   };
   segments[27] = {
     colStart: colStart + H_COLS,
     colEnd,
     row: botRow,
-    rowEnter: botRow,
+    rowEnter: midRow,
     rowExit: botRow,
     topRow,
+    midRow,
     botRow,
   };
   cursor.col = colEnd;
@@ -1143,26 +1236,23 @@ tagEnemy(32, 'patrolDrone');
 // =====================================================================
 // Beat 9: Pre-boss corridor (34-35) -> checkpoint -> boss room.
 // =====================================================================
-{
-  const s = screenR(cursor.col + H_COLS, cursor.row);
-  segments[34] = s;
-  addEntity(
-    'energyPickup',
-    'pickup-preboss-1',
-    tileCenterX(s.colStart + 6),
-    standingY(s.row),
-    16,
-    16,
-  );
-  addEntity(
-    'energyPickup',
-    'pickup-preboss-2',
-    tileCenterX(s.colStart + 16),
-    standingY(s.row),
-    16,
-    16,
-  );
-}
+segments[34] = screenDStair(cursor.col + V_COLS, cursor.row);
+addEntity(
+  'energyPickup',
+  'pickup-preboss-1',
+  tileCenterX(segments[34].treads[1].col),
+  standingY(segments[34].treads[1].row),
+  16,
+  16,
+);
+addEntity(
+  'energyPickup',
+  'pickup-preboss-2',
+  tileCenterX(segments[34].treads[3].col),
+  standingY(segments[34].treads[3].row),
+  16,
+  16,
+);
 {
   const s = screenR(cursor.col + H_COLS, cursor.row);
   segments[35] = s;
@@ -1219,6 +1309,7 @@ for (const beat of beatToScreens) {
     const s = segments[n];
     rows.push(s.rowEnter, s.rowExit, s.row);
     if (s.topRow !== undefined) rows.push(s.topRow, s.botRow);
+    if (s.midRow !== undefined) rows.push(s.midRow);
   }
   const rowTop = Math.min(...rows) - 20;
   const rowBottom = Math.max(...rows) + 20;
@@ -1495,15 +1586,20 @@ console.log(
 );
 console.log(JSON.stringify(surfaceByRealScreen));
 
+console.log('\nDECLARED AXIS: HORIZONTAL-DOMINANT (vertical target >=20%)');
 console.log(
-  `\nCONTROLLED DESCENT (boost-strip): generator screens ${descentRangeStart}-${descentRangeEnd}`,
+  `Structural element 1/2 - CONTROLLED DESCENT (boost-strip): generator screens ${descentRangeStart}-${descentRangeEnd}`,
 );
 console.log(
-  `ASCENT SHAFT (solar pylon, 3 wall-kick legs): generator screens ${ascentRangeStart}-${ascentRangeEnd}`,
+  `Structural element 2/2 - MULTI-FLOOR ROOM (highway underpass, 3 shallow decks, 2 real screens): generator screens 26-27`,
 );
-console.log(`MULTI-FLOOR ROOM (highway underpass, 2 real screens): generator screens 26-27`);
 console.log(
-  `BRANCH & REJOIN (turbine tower): fork screen ${branchForkScreen}, rejoin screen ${branchRejoinScreen}`,
+  'Ascent shaft: NOT used as a structural element (not required for a horizontal-dominant stage) - ' +
+    'one short wall-kick leg kept as texture only at generator screen 30 (finalExam), matching GDD ' +
+    '§3.1 (\"short wall-kick climbs are fine as texture\").',
+);
+console.log(
+  `BRANCH & REJOIN (turbine tower, mandatory for every stage): fork screen ${branchForkScreen}, rejoin screen ${branchRejoinScreen}`,
 );
 
 const outPath = process.argv[2] || 'speedway.json';

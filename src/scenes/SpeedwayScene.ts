@@ -13,13 +13,14 @@ import { LegsCapsuleStub } from '@/actors/LegsCapsuleStub';
 import { EnergyPickupStub } from '@/actors/EnergyPickupStub';
 
 const ARENA_MARGIN = 24;
-// M2-AUDIT-REBUILD (generate-speedway-map.mjs) ends the main path well
-// below the stage's starting baseline (the mandatory 3-screen ascent
-// shaft is more than offset by the boost-strip descent and branch/stair
-// drops - see DECISIONS.md for the full elevation walk), so this is read
-// directly from the generated map's own bossSpawn object-center Y rather
-// than hand-derived, same discipline as Reservoir's boss room constant.
-const BOSS_ROOM_FLOOR_Y = 1222;
+// M2-AUDIT-REBUILD (generate-speedway-map.mjs), re-audited against the
+// axis-flexible §2.6/§3.1 revision, ends the main path well below the
+// stage's starting baseline (no ascent shaft remains to offset the
+// boost-strip descent and the branch/stair drops - see DECISIONS.md for
+// the full elevation walk), so this is read directly from the generated
+// map's own bossSpawn object-center Y rather than hand-derived, same
+// discipline as Reservoir's boss room constant.
+const BOSS_ROOM_FLOOR_Y = 1990;
 // The boss room is much taller than the 180px-tall native viewport, so the
 // locked boss camera must center on the ground band, not the map's overall
 // vertical midpoint - the latter would frame mostly empty air above the fight.
