@@ -43,10 +43,25 @@ const TOP = 2; // GID 2: floor-top tile
 
 // Base-kit jump-reach ceilings (see DECISIONS.md "Bugfix - Speedway gaps
 // exceeding base-kit jump reach"): a flat-ground jump maxes out at
-// ~3.97 tiles, a wall-kick burst at ~4.28 tiles. Every authored gap here
-// stays at or under 3 tiles (48px, ~30-40% margin) - proven safe in that
-// bugfix, reused verbatim rather than re-derived.
+// ~3.97 tiles, a wall-kick burst at ~4.28 tiles. Every VOID gap (a real
+// hole in the ground, where the only way to trigger a jump is to keep
+// running until the floor ends - naturally anchoring takeoff right at
+// the edge) stays at or under 3 tiles (48px, ~30-40% margin) - proven
+// safe in that bugfix, reused verbatim rather than re-derived.
 const SAFE_GAP_TILES = 3;
+// Lethal ground hazards (spikes) are a NARROWER case: they sit on
+// otherwise-continuous solid ground, so nothing forces the player to
+// jump right at the hazard's edge the way a void gap does - a player who
+// jumps even ~20-40px too early (a normal reaction, not a mistake) burns
+// flight distance before ever reaching the hazard and can land short,
+// INSIDE it, which is instant death rather than a recoverable short
+// fall. Live Playwright testing (teleport-and-jump at controlled
+// distances before the hazard, holding to a full max-height jump) found
+// a 3-tile (48px) spike patch fails even a reasonably-timed jump (~18px
+// early), while 2 tiles (32px) survives every timing up to ~16px early
+// and is what 3 of the 4 spike placements already used - narrowed the
+// one 3-tile outlier to match. See DECISIONS.md for the full writeup.
+const SAFE_SPIKE_TILES = 2;
 
 // --- Sparse grid -----------------------------------------------------------
 const cells = new Map();
@@ -238,10 +253,9 @@ function screenR(colEnd, row) {
 }
 
 /** motif 'gap': flat floor split by one SAFE_GAP_TILES-wide pit - a highway with a broken section, not a descent. */
-function screenRGap(colEnd, row) {
-  const gapStart =
-    cursor.col + Math.floor((colEnd - cursor.col) / 2) - Math.floor(SAFE_GAP_TILES / 2);
-  const gapEnd = gapStart + SAFE_GAP_TILES;
+function screenRGap(colEnd, row, gapTiles = SAFE_GAP_TILES) {
+  const gapStart = cursor.col + Math.floor((colEnd - cursor.col) / 2) - Math.floor(gapTiles / 2);
+  const gapEnd = gapStart + gapTiles;
   fillFloor(cursor.col, gapStart, row);
   fillFloor(gapEnd, colEnd, row);
   const seg = {
@@ -763,7 +777,7 @@ segments[12] = screenDStair(cursor.col + V_COLS, cursor.row);
     'spikes-escalation',
     tileCenterX(s.colStart + 12),
     standingY(s.row, -2),
-    48,
+    SAFE_SPIKE_TILES * TILE,
     16,
   );
   addEntity(
@@ -961,7 +975,7 @@ tagGimmick(22, 'speedStrip');
     'spikes-setpiece',
     tileCenterX(s.colStart + 10),
     standingY(s.row, -2),
-    32,
+    SAFE_SPIKE_TILES * TILE,
     16,
   );
   addEntity(
@@ -1156,9 +1170,34 @@ addCheckpoint(
 // of each element one at a time.
 // =====================================================================
 {
-  const s = screenRGap(cursor.col + H_COLS, cursor.row);
+  // Compound obstacle: a void gap immediately followed by spikes. Live
+  // testing found a full SAFE_GAP_TILES (3-tile) gap here only clears a
+  // deliberately-early (~16px-before-the-edge) jump by a fraction of a
+  // pixel of theoretical reach - fine for a standalone void gap (nothing
+  // rewards jumping early over open ground, so players naturally run to
+  // the true edge before jumping), but this gap has spikes waiting
+  // immediately after it, which can plausibly make a cautious player
+  // jump a little early. Narrowed to 2 tiles here specifically (not
+  // globally - the other 5 void gaps in this stage are still 3 tiles,
+  // already proven safe under their own normal-timing tests) so the
+  // compound sequence has real slack even under an early jump. The
+  // landing strip between the gap and the spikes gets its own margin
+  // too, not just the two hazards individually - widened from 2 to 4
+  // tiles so a slightly-long landing off the gap jump can't carry
+  // straight into the spikes before the player gets a chance to plant
+  // and re-jump.
+  const s = screenRGap(cursor.col + H_COLS, cursor.row, 2);
   segments[29] = s;
-  addHazard('spikes', 'spikes-exam-A', tileCenterX(s.gap.right + 3), standingY(s.row, -2), 32, 16);
+  const landingStripTiles = 4;
+  const spikeExamALeftCol = s.gap.right + landingStripTiles;
+  addHazard(
+    'spikes',
+    'spikes-exam-A',
+    tileCenterX(spikeExamALeftCol + SAFE_SPIKE_TILES / 2),
+    standingY(s.row, -2),
+    SAFE_SPIKE_TILES * TILE,
+    16,
+  );
   addEntity(
     'patrolDrone',
     'patrolDrone-exam-A',
@@ -1228,7 +1267,14 @@ tagEnemy(32, 'patrolDrone');
 {
   const s = screenR(cursor.col + H_COLS, cursor.row);
   segments[33] = s;
-  addHazard('spikes', 'spikes-exam-B', tileCenterX(s.colStart + 12), standingY(s.row, -2), 32, 16);
+  addHazard(
+    'spikes',
+    'spikes-exam-B',
+    tileCenterX(s.colStart + 12),
+    standingY(s.row, -2),
+    SAFE_SPIKE_TILES * TILE,
+    16,
+  );
   addEntity('energyPickup', 'pickup-exam', tileCenterX(s.colStart + 17), standingY(s.row), 16, 16);
   tagHazard(33, 'spikes');
 }
@@ -1545,6 +1591,60 @@ console.log(
 );
 if (maxFlatRun > 3)
   throw new Error(`surface has ${maxFlatRun} consecutive near-flat real screens (limit 3)`);
+
+// =====================================================================
+// GDD §2.5 pillar 1 fairness audit: every void gap AND every lethal
+// ground hazard (spikes), measured in tiles, checked against the
+// discipline-specific safe ceilings above. Void gaps and spikes are
+// checked separately (not against the same ceiling) because a spike
+// patch is far less forgiving of an early jump than an equivalent-width
+// void gap is - see SAFE_SPIKE_TILES's comment for the live-tested
+// reasoning. Found via the same raw-tile gap scan used in the original
+// base-kit jump-reach bugfix (scan every column for the topmost solid
+// tile, group empty-column runs into gaps), reused here as a mechanical
+// gate rather than trusted by construction.
+// =====================================================================
+function topSolidRowAtAnyLayer(col) {
+  for (let r = 0; r < height; r += 1) if (grid[r][col] !== EMPTY) return r;
+  return null;
+}
+const colTop = [];
+for (let c = 0; c < width; c += 1) colTop.push(topSolidRowAtAnyLayer(c));
+const voidGaps = [];
+{
+  let gapStart = null;
+  for (let c = 0; c < width; c += 1) {
+    if (colTop[c] === null) {
+      if (gapStart === null) gapStart = c;
+    } else if (gapStart !== null) {
+      voidGaps.push({ colStart: gapStart, colEnd: c, tiles: c - gapStart });
+      gapStart = null;
+    }
+  }
+}
+console.log('\nVoid-gap audit (full-column empty runs, ceiling: ' + SAFE_GAP_TILES + ' tiles):');
+let voidGapFailures = 0;
+for (const g of voidGaps) {
+  const ok = g.tiles <= SAFE_GAP_TILES;
+  if (!ok) voidGapFailures += 1;
+  console.log(
+    `  cols ${g.colStart}-${g.colEnd}: ${g.tiles} tiles (${g.tiles * TILE}px) - ${ok ? 'OK' : 'FAIL'}`,
+  );
+}
+if (voidGapFailures > 0)
+  throw new Error(`${voidGapFailures} void gap(s) exceed ${SAFE_GAP_TILES} tiles`);
+
+console.log(`\nSpike-hazard audit (ceiling: ${SAFE_SPIKE_TILES} tiles):`);
+let spikeFailures = 0;
+for (const hz of hazardObjects) {
+  if (hz.type !== 'spikes') continue;
+  const tiles = hz.width / TILE;
+  const ok = tiles <= SAFE_SPIKE_TILES;
+  if (!ok) spikeFailures += 1;
+  console.log(`  ${hz.name}: ${tiles} tiles (${hz.width}px) - ${ok ? 'OK' : 'FAIL'}`);
+}
+if (spikeFailures > 0)
+  throw new Error(`${spikeFailures} spike hazard(s) exceed ${SAFE_SPIKE_TILES} tiles`);
 
 // =====================================================================
 // Route map + full report

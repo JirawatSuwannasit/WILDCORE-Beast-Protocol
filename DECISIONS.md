@@ -3,6 +3,77 @@
 Running log of deviations from `docs/GDD.md`, and judgment calls made where a requirement was
 ambiguous. One entry per decision, newest first.
 
+## Bugfix (P1) — Speedway spikes exceeding a fair base-kit jump (GDD §2.5 pillar 1)
+
+- **The report and the measurement.** Reported hazard: a lethal spike patch near world pos
+  `(3481, 836)` (`spikes-escalation`) that killed the player on every attempt. Measured it directly
+  (JSON + raw-tile scan, not eyeballed): a 48px (3-tile) spikes hazard sitting on continuous solid
+  ground (no actual hole in the floor) - the ground itself never had a gap here, the "gap" is purely
+  the horizontal span the player has to clear in the air to avoid the spikes.
+- **Why 48px failed even though it matches the codebase's own established "safe" gap value.** The
+  existing `SAFE_GAP_TILES = 3` (48px) constant, used throughout this generator for VOID gaps, was
+  proven safe in an earlier bugfix (see "Bugfix — Speedway gaps exceeding base-kit jump reach" below)
+  against a ~63.5px max jump-reach ceiling - but that proof implicitly assumes the player takes off
+  right at the gap's edge, which a void gap naturally enforces (there's no reason to jump before the
+  floor actually ends; you just keep running). A spikes hazard sitting on *continuous* ground doesn't
+  have that natural edge-anchor - a player can, and often will, jump a bit early out of caution.
+  Live Playwright testing (teleport to a controlled distance before the hazard, hold the run key, then
+  hold jump to a full max-height apex - the same reproduction as an actual "run up and jump" player)
+  confirmed this directly: a jump launched only ~18-20px before the 48px zone lands the player
+  *inside* the spikes, dead, every time - exactly matching the report. The same jump launched only
+  ~8px before a 32px zone clears it every time. **Root cause: 48px is fine for a void gap (edge-
+  anchored takeoff) but too wide for a flush lethal hazard (takeoff point varies).**
+- **Fix: narrowed spikes specifically, not the void-gap constant.** Added `SAFE_SPIKE_TILES = 2` (32px)
+  as its own named ceiling, separate from `SAFE_GAP_TILES` (3/48px, unchanged) - conflating the two
+  would have either needlessly narrowed every void gap in the stage (they don't have this problem) or
+  left spikes at an unsafe width. `spikes-escalation` was the only one of the four spike placements
+  still using the old 48px value (a leftover from before the width-safety distinction existed); the
+  other three already happened to be 32px and were spot-verified safe under the exact reproduction
+  pattern that killed the reported one.
+- **A second, related finding while auditing: a compound gap+spikes obstacle in finalExam
+  (`spikes-exam-A`, right after a void gap) was ALSO fragile, for a different reason.** The void gap
+  itself measured the same proven 48px, but testing it in isolation with a deliberately-early
+  (~16px-before-edge) jump - representative of a player who's already seen the spikes waiting right
+  after and reacts a little early - cleared the gap by only a fraction of a pixel of theoretical
+  reach, an unreliable margin (it passed in one test run and failed in another, purely from normal
+  frame-timing variance). Narrowed this ONE void gap to 2 tiles (32px) via a new optional `gapTiles`
+  parameter on `screenRGap` (the other 5 void gaps in the stage stay at 3 tiles/48px - already proven
+  safe under their own normal edge-anchored timing, not touched) and widened the landing strip between
+  the gap and the spikes from 2 to 4 tiles (32px → 64px) so a slightly-long landing off the gap jump
+  can't carry straight into the spikes before the player has room to plant and re-jump.
+- **Made the fairness check mechanical, not just fixed by hand.** Added a gap/hazard audit pass to
+  `generate-speedway-map.mjs` (reusing the raw-tile column-scan technique from the original base-kit
+  jump-reach bugfix) that runs on every generation: every void gap must be ≤ `SAFE_GAP_TILES`, every
+  `spikes` hazard's width must be ≤ `SAFE_SPIKE_TILES`, and the generator throws (fails the build) if
+  either is violated. This is a permanent gate, not a one-time manual pass - a future edit that
+  accidentally widens a hazard will fail to generate rather than silently reintroducing this bug.
+- **Full audit results, before → after** (every gap/hazard the generator produces, all now passing
+  the ceilings above; "before" values are from the merged map prior to this fix):
+
+  | Hazard/gap | Location | Before | After | Ceiling | Note |
+  |---|---|---|---|---|---|
+  | `spikes-escalation` | escalation, real screen ~11 | 48px (3 tiles) | **32px (2 tiles)** | 32px | The reported bug |
+  | `spikes-setpiece` | setpiece | 32px (2 tiles) | 32px (2 tiles) | 32px | Already compliant |
+  | `spikes-exam-A` | finalExam | 32px (2 tiles) | 32px (2 tiles) | 32px | Already compliant |
+  | `spikes-exam-B` | finalExam | 32px (2 tiles) | 32px (2 tiles) | 32px | Already compliant |
+  | Void gap, tutorial | tutorial | 48px (3 tiles) | 48px (3 tiles) | 48px | Edge-anchored, unchanged |
+  | Void gap, remix (bridge) | remix | 48px (3 tiles) | 48px (3 tiles) | 48px | Spanned by a collapsing bridge, unchanged |
+  | Void gap, remix (plain) | remix | 48px (3 tiles) | 48px (3 tiles) | 48px | Edge-anchored, unchanged |
+  | Void gap, breather transition | breather entry | 48px (3 tiles) | 48px (3 tiles) | 48px | Edge-anchored, unchanged |
+  | Void gap, finalExam (compound w/ spikes-exam-A) | finalExam | 48px (3 tiles) | **32px (2 tiles)** | 48px normally, narrowed for this compound case | Fragile margin under an early jump when spikes follow immediately |
+  | Void gap, finalExam | finalExam | 48px (3 tiles) | 48px (3 tiles) | 48px | Edge-anchored, unchanged |
+
+  (Wall-kick shaft gaps are a separate, already-audited category - see the M2-AUDIT-REBUILD entry
+  below; unaffected by this fix, not re-touched here.)
+- **Verification.** Live Playwright reproduction of the exact reported failure pattern (56px runway,
+  natural 400ms run-up, full-height held jump) now survives for `spikes-escalation`, `spikes-setpiece`,
+  and `spikes-exam-B`. The compound gap+spikes-exam-A sequence, tested with precisely-timed jumps at
+  each edge, now clears both obstacles with zero HP loss (previously died reliably). The generator's
+  new audit pass reports every gap/hazard width on every run (pasted above) and fails the build if any
+  exceeds its ceiling. Full verification suite (typecheck/lint/format/test/build) passes; `SpeedwayScene.ts`
+  needed no changes (only hazard-object widths/positions changed, not the ground tile layer, so the
+  boss room and other geometry-derived constants are unaffected).
+
 ## M2 — Speedway Savanna re-audited against the axis-flexible §2.6/§3.1 revision
 
 - **Doc sync landed directly on `main` (not via a docs PR from this session).** `docs/GDD.md` and
