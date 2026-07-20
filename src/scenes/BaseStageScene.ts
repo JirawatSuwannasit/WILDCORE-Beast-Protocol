@@ -48,6 +48,18 @@ const CAMERA_SAFETY_MARGIN_Y = 24;
 const VERTICAL_ZONE_ENTRY_PAN_MS = 220;
 const NORMAL_CAMERA_LERP = 0.15;
 
+// DEBUG TOOL ONLY (see debugOverlay.ts's path-line nav aid): entity
+// `type`s that represent an off-route secret, drawn as a dim branch spur
+// instead of a main-path node. Kept as a small known-set rather than a
+// map-authored property, since it's purely a dev-build visualization
+// concern - no stage generator needs to know about it.
+const SECRET_ENTITY_TYPES = new Set([
+  'bodyCapsulePump',
+  'legsCapsule',
+  'armsCapsule',
+  'heartCapsule',
+]);
+
 export type EntitySpawner = (
   scene: BaseStageScene,
   x: number,
@@ -219,12 +231,21 @@ export abstract class BaseStageScene extends BaseScene {
       })),
     ]);
 
+    const entityObjects = getObjectLayer(this.mapData, 'entities');
+    const bossDoorObject = entityObjects.find((o) => o.type === 'bossDoor');
     const landmarks: DebugLandmark[] = [
-      ...checkpointObjects.map((o) => ({ id: o.name, x: objectCenter(o).x })),
+      ...checkpointObjects.map((o) => ({ id: o.name, ...objectCenter(o), kind: 'main' as const })),
       ...getObjectLayer(this.mapData, 'sections').map((o) => ({
         id: o.name,
-        x: objectCenter(o).x,
+        ...objectCenter(o),
+        kind: 'main' as const,
       })),
+      ...(bossDoorObject
+        ? [{ id: 'bossDoor', ...objectCenter(bossDoorObject), kind: 'main' as const }]
+        : []),
+      ...entityObjects
+        .filter((o) => SECRET_ENTITY_TYPES.has(o.type))
+        .map((o) => ({ id: o.name, ...objectCenter(o), kind: 'branch' as const })),
     ];
     this.debugOverlay = new DebugOverlay(this, this.player, [], landmarks);
   }

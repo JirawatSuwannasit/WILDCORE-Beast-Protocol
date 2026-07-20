@@ -3,6 +3,38 @@
 Running log of deviations from `docs/GDD.md`, and judgment calls made where a requirement was
 ambiguous. One entry per decision, newest first.
 
+## Debug tool — path-line nav aid replaces the single nearest-landmark readout
+
+- **What was actually there before this.** The request described upgrading "the debug navigation aid
+  ... from a single arrow" and asked to "keep the existing `next: <id>` text". Neither existed: the
+  overlay (`debugOverlay.ts`) had no arrow or line rendering of any kind, and its readout was
+  `near: <id>` - the *nearest* landmark by absolute x-distance, not the *next* one ahead of the player
+  (a meaningful difference: standing just past a checkpoint, "nearest" reports the one you already
+  passed). Proceeded anyway rather than blocking on the mismatch, same reasoning as the M4.1-REBUILD-2
+  raw-tile audit: the requested end state is fully specified and independently buildable regardless of
+  what label the prior state used, and this is a debug-only visualization with no design content to
+  get wrong. Replaced `near:` with genuine forward-looking `next:` semantics as part of this change.
+- **Route model.** `DebugLandmark` gained `y` (was x-only, insufficient for a 2D line) and
+  `kind: 'main' | 'branch'`. Main-path nodes are checkpoints + beat `sections` (already emitted by
+  both stage generators) + the map's `bossDoor` entity, read generically off the `entities`/`sections`
+  object layers in `BaseStageScene` - no stage-specific code needed, both Speedway and Reservoir get
+  this automatically. Branch/secret nodes come from a small known set of capsule entity `type`s
+  (`bodyCapsulePump`, `legsCapsule`, plus `armsCapsule`/`heartCapsule` for forward-compat with M5-M8) -
+  kept as a hardcoded set in `BaseStageScene.ts` rather than an authored map property, since it's
+  purely a dev-build visualization concern with no bearing on the actual stage data.
+- **Rendering.** Main path: a bright white dashed polyline from the player's live position through
+  every upcoming main-path node in ascending-x order, ending at the boss door, with a small filled dot
+  at each node - unbroken through branch points. Branch/secret nodes: a dim, thin, undashed line from
+  the *nearest* main-path node out to the secret's actual position, so it reads as an optional
+  side-trip rather than part of the route. Dash-segment math (`computeDashSegments`) is a pure,
+  independently unit-tested function (`dashedLine.ts`) - Graphics-drawing glue in `debugOverlay.ts`
+  just strokes whatever segments it returns, same split as `waterPhysics.ts`/`jumpPhysics.ts`.
+- **Scope.** Gated behind the same `debugBuildEnabled` check that already gates the `pos:`/`tile:`/
+  `screen:` readout lines (false in a release `vite build`, true only for `npm run dev` and the debug-
+  APK mode) and toggled by the same F3 / three-finger-tap the rest of the overlay already uses - no new
+  toggle, no gameplay-affecting change, confirmed via `git diff src/main.ts` being empty after the
+  temporary live-verification hook was reverted.
+
 ## Bugfix (P1) — Coral Reservoir water gimmick: player hidden and unable to submerge
 
 Two related GDD §3.2 "underwater float physics" failures around the setpiece's rising water
