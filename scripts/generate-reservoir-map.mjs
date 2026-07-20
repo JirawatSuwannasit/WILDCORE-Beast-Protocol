@@ -617,24 +617,46 @@ const descentRangeEnd = 7;
 }
 
 // =====================================================================
-// Beat 5: Remix (14-19) - REAL multi-floor room (2 gaps = 2 screen-slots,
-// 3 tiers) + a genuinely 2-screen-wide branch + short link into setpiece.
+// Beat 5: Remix (14-19) - REAL multi-floor room. Previously this was a
+// single 20-tile (1-screen) room with 3 tiers stacked in a cross-section -
+// mechanically "2 D-slots" in this generator's own bookkeeping, but
+// physically only one real 320px screen wide, which reads as a blip rather
+// than a room the player traverses. Widened to a genuine 40-tile (2-screen)
+// span: each tier is a real corridor the player rides for a real stretch,
+// not just a landing pad at the entrance.
 // =====================================================================
 {
   const colStart = cursor.col;
-  const colEnd = cursor.col + H_COLS;
+  const colEnd = cursor.col + H_COLS * 2;
   const topRow = cursor.row;
   const midRow = topRow + V_COLS;
   const botRow = topRow + V_COLS * 2;
-  fillWall(colStart, colStart + 2, topRow - 4, botRow + FILL_DEPTH);
-  fillWall(colEnd - 2, colEnd, topRow - 4, botRow + FILL_DEPTH);
-  fillFloor(colStart + 2, colEnd - 2, topRow, 0);
-  fillFloor(colStart + 2, colEnd - 2, midRow, 0);
+  // Entry/exit backstops start at their OWN floor's row, not several tiles
+  // above it (see screenDChute's comment - a wall starting above the row
+  // the player is already standing on blocks the flat walk-in entirely,
+  // since Arcade collision doesn't care whether a solid tile is FILL or
+  // TOP). The entry wall only needs to back up topRow (where the player
+  // enters); the exit wall only needs to back up botRow (every tier funnels
+  // there by the room's far end, so that's the only floor exposed there).
+  fillWall(colStart, colStart + 2, topRow, botRow + FILL_DEPTH);
+  fillWall(colEnd - 2, colEnd, botRow, botRow + FILL_DEPTH);
+  // Three real corridors. Top and mid each run most of the room's width
+  // then stop short of the exit, so anyone who never touches a valve still
+  // funnels down to the bottom tier by colEnd (matching the next screen's
+  // expected entry row) instead of hitting a dead-end wall.
+  const topFloorEnd = colEnd - 14;
+  const midFloorEnd = colEnd - 7;
+  fillFloor(colStart + 2, topFloorEnd, topRow, 0);
+  fillFloor(colStart + 2, midFloorEnd, midRow, 0);
   fillFloor(colStart + 2, colEnd - 2, botRow);
-  const gateAColStart = colStart + 8;
-  const gateAColEnd = colStart + 13;
-  const gateBColStart = colStart + 8;
-  const gateBColEnd = colStart + 13;
+  // Gate A (top -> mid) sits a real stretch into the room, so choosing to
+  // drop early is a deliberate call, not the first thing you see. Gate B
+  // (mid -> bottom) is only reachable after already having dropped through
+  // Gate A onto the mid tier.
+  const gateAColStart = colStart + 14;
+  const gateAColEnd = colStart + 19;
+  const gateBColStart = colStart + 26;
+  const gateBColEnd = colStart + 31;
   for (let c = gateAColStart; c < gateAColEnd; c += 1) {
     for (let r = topRow; r < midRow; r += 1) cells.delete(`${r},${c}`);
   }
@@ -662,7 +684,7 @@ const descentRangeEnd = 7;
   addEntity(
     'waterValve',
     'valve-multifloor-B',
-    tileCenterX(colStart + 4),
+    tileCenterX(gateAColEnd + 2),
     standingY(midRow),
     12,
     16,
@@ -677,19 +699,48 @@ const descentRangeEnd = 7;
     (botRow - midRow) * TILE,
     [{ name: 'startsOpen', type: 'bool', value: false }],
   );
+  // Top tier: a bubbleCrab guarding the stretch before Gate A, a pickup
+  // riding the safe top route toward the funnel.
   addEntity(
     'bubbleCrab',
-    'bubbleCrab-multifloor-bottom',
-    tileCenterX(colEnd - 5),
-    standingY(botRow, 8),
+    'bubbleCrab-multifloor-top',
+    tileCenterX(colStart + 9),
+    standingY(topRow, 8),
+    16,
+    16,
+  );
+  addEntity(
+    'energyPickup',
+    'pickup-multifloor-top',
+    tileCenterX(topFloorEnd - 3),
+    standingY(topRow),
+    16,
+    16,
+  );
+  // Mid tier: a dartFish past Gate A, a pickup riding toward Gate B.
+  addEntity(
+    'dartFish',
+    'dartFish-multifloor-mid',
+    tileCenterX(gateAColEnd + 6),
+    standingY(midRow, 5),
     16,
     16,
   );
   addEntity(
     'energyPickup',
     'pickup-multifloor-mid',
-    tileCenterX(colEnd - 4),
+    tileCenterX(midFloorEnd - 3),
     standingY(midRow),
+    16,
+    16,
+  );
+  // Bottom tier: the reward for going all the way down, plus the funnel
+  // catch guard.
+  addEntity(
+    'bubbleCrab',
+    'bubbleCrab-multifloor-bottom',
+    tileCenterX(colEnd - 5),
+    standingY(botRow, 8),
     16,
     16,
   );
@@ -724,8 +775,9 @@ const descentRangeEnd = 7;
   cursor.col = colEnd;
   cursor.row = botRow;
   tagGimmick(14, 'waterValve');
+  tagEnemy(14, 'bubbleCrab');
   tagGimmick(15, 'waterValve');
-  tagEnemy(15, 'bubbleCrab');
+  tagEnemy(15, 'dartFish');
 }
 
 {
@@ -752,13 +804,17 @@ let branchRejoinScreen;
   const colStart = cursor.col;
   const colEnd = cursor.col + H_COLS * 2;
   const lowerRow = cursor.row;
-  const upperRow = cursor.row - 3;
+  // 9 rows (144px) of open air between the bands - enough that both read
+  // as genuinely separate elevations in a single camera frame (a "flooded
+  // gallery above" and a "drained crawl below", not a stacked double-ledge
+  // 3 rows apart that barely needs a duck to cross between).
+  const upperRow = cursor.row - 9;
   fillFloor(colStart, colEnd, lowerRow);
-  // depth=0: upperRow is only 3 rows above lowerRow, so a nonzero fill depth
-  // here would bury the lower crawl's headroom/surface in solid ground (the
-  // same trap the multi-floor room's topRow/midRow fills avoid). The open
-  // rows between upperRow and lowerRow are what make this a genuine
-  // two-band branch instead of one solid block with a ledge on top.
+  // depth=0: a nonzero fill depth here would bury the lower crawl's
+  // headroom/surface in solid ground (the same trap the multi-floor room's
+  // topRow/midRow fills avoid). The open rows between upperRow and lowerRow
+  // are what make this a genuine two-band branch instead of one solid
+  // block with a ledge on top.
   fillFloor(colStart + 2, colEnd - 8, upperRow, 0);
   fillWall(colStart, colStart + 2, upperRow, lowerRow + FILL_DEPTH);
 
