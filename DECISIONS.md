@@ -3,6 +3,55 @@
 Running log of deviations from `docs/GDD.md`, and judgment calls made where a requirement was
 ambiguous. One entry per decision, newest first.
 
+## M4.1-REBUILD-3 — multi-floor room widened, branch bands deepened, and a screen-numbering discrepancy resolved
+
+- **Why the PO's screen numbers ("screen 11", "screens 15-22") didn't match this repo's own report
+  ("screens 14-15", "screens 20-26").** This generator's `segments[]` index counts *generation units*,
+  not real 320px camera-viewport screens - a vertical ('D'/'U') unit is only `V_COLS`=12 tiles (192px)
+  wide, 60% of a horizontal ('R') unit's 20 tiles (320px). Converting entity x-positions to real
+  screens (`x / 320 + 1`) lines the PO's numbers up almost exactly with what was actually built (multi-
+  floor gate at real screen ~12.4, matching "screen 11"; ascent shaft spanning real screens ~16.6-21.2,
+  matching "screens 15-22"). The PO's numbers were the real, player-experienced ones; this generator's
+  own `segments[]` index was the misleading one. Fixed the *reporting* going forward - screen ranges in
+  this entry and the accompanying PR use real `x/320+1` screen numbers, not segment index.
+- **Root cause of "multi-floor room is only 1 screen": it was.** The room's `colEnd` was hardcoded to
+  `cursor.col + H_COLS` (one 20-tile/320px screen), and the 2 `segments[]` slots it "spans" in this
+  generator's own bookkeeping were purely a vertical-stat label (2 D-tagged slots for 2 real 12-tile
+  elevation drops) - not 2 real screens of horizontal travel. All 3 tiers, both gates, and both valves
+  were crammed into that single 320px width. Fixed by widening `colEnd` to `cursor.col + H_COLS * 2`
+  (a real 40-tile/2-screen span, real screens ~12-14) and spreading the valve/gate pairs across that
+  width (Gate A now ~14 tiles in, Gate B ~26 tiles in, vs. both crammed within the first 8-13 tiles
+  before) so each tier is a real corridor the player rides, not a landing pad at the entrance. Also
+  added a second enemy + pickup per tier so the extra width has real content, not empty runway.
+- **A second, more consequential bug found in the same room while fixing the first: the entry wall
+  blocked the room outright, on both the old and new width.** Same class of bug as the
+  `screenDChute`/`screenDStair`/`screenDSheer` fix from the prior rebuild (M4.1-REBUILD-2), just never
+  applied here since this room is hand-coded rather than using those helper functions: the entry
+  backstop wall was `fillWall(colStart, colStart+2, topRow-4, botRow+FILL_DEPTH)`, four tiles *above*
+  the floor the player is already standing on when walking in from the previous screen. Confirmed via
+  raw tile scan (column 220-221, the pre-existing pre-fix file: solid continuously from row 100, no
+  break, with the player's own approach row also 100 - fully embedded) and via the full-stage
+  live-browser sweep from the prior session stalling at almost exactly this column. This plausibly
+  explains why the room "wasn't there" in actual play even before the width problem: a player walking
+  in flat from the previous screen never got past the threshold to see the tiers at all. Fixed the same
+  way as the descent primitives - backstop walls now start exactly at their own floor's row (entry wall
+  at `topRow`, exit wall at `botRow`, the only floor exposed at the room's far end since every tier
+  funnels there).
+- **Branch fix: same width, deeper gap.** The branch's 40-tile/2-screen span was already correct (built
+  correctly in M4.1-REBUILD-2); what wasn't was the *separation* between bands - `upperRow` was only 3
+  rows (48px, one player-height) above `lowerRow`, so the "flooded gallery" and "drained crawl" were
+  functionally the same elevation with a barely-there step between them, not two distinct routes.
+  Widened to 9 rows (144px) of open air between the bands. Raw tile scan confirms both bands are
+  simultaneously present at every sampled column, now with a real vertical gap between them (rows 119
+  and 128, vs. 125 and 128 before).
+- **Verification.** Live-browser walkthrough (temporary debug hook, reverted before commit - `git diff
+  src/main.ts` is empty): walked the full multi-floor room end to end (top tier -> valve A -> drop
+  through gate A -> mid tier -> continues walking, all landings solid, zero fall-throughs), confirmed
+  the bottom tier is a real ~14-tile floor, and walked both branch bands independently across their
+  full width. `npm run typecheck`/`lint`/`format:check`/`test`/`build` all clean; the generator's own
+  §2.6/§2.7/motif checks all still pass (0 consecutive-signature violations, longest motif run still 3,
+  max same-direction run still 3, 47.2% vertical, 19 direction changes).
+
 ## M4.1-REBUILD-2 — Coral Reservoir: the ground layer itself, re-authored by hand
 
 - **Why this exists.** M4.1-REBUILD was rejected: it reused the same three deterministic
