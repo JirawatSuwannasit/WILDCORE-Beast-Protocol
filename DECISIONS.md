@@ -3,6 +3,98 @@
 Running log of deviations from `docs/GDD.md`, and judgment calls made where a requirement was
 ambiguous. One entry per decision, newest first.
 
+## M4.1-REBUILD — Coral Reservoir re-authored for GDD §2.7 content/terrain variety
+
+- **Starting point and a discrepancy worth recording.** The rebuild request described the pre-rebuild
+  file as "29 screens" with escalation at screens 7-10 and finalExam at 22-25. The actual `main`/PR
+  branch `reservoir.json` at the time (the only copy that exists anywhere in this repo's git history -
+  checked every branch) was the 35-screen M4.1 build from this same PR, with escalation at 9-13 and
+  finalExam at 29-33. No 29-screen variant exists anywhere accessible. Proceeded by rebuilding *that*
+  file (the one actually in the repo) against the four problems as stated, rather than blocking on the
+  mismatch - the four problems themselves are concrete and independently checkable regardless of which
+  screen numbers originally illustrated them, and this repo's own earlier "audit" comment (posted
+  before this rebuild request) independently found the same problem categories in the real file, just
+  under different screen numbers. Beat *markers* (9 beats, same names/order) and checkpoint *roles*
+  (start / post-mid-boss / post-setpiece / pre-boss, same 4) are unchanged; exact screen counts per
+  beat shifted because the terrain itself was substantially reworked (real branch, real multi-floor
+  gates, a rising-water shaft) - preserving the old beat/checkpoint *identity* while changing their
+  *content* is the reading of "keep beat markers and checkpoints where they are" that's consistent
+  with also being asked to fix the terrain shape in the same request.
+- **Problem 1 (repeated enemy formula) fixed by authoring each screen as one named SITUATION**, not a
+  blended current+bubbleCrab+urchin sprinkle. Escalation (beat 3, screens 8-12) teaches each element
+  in isolation first (Bubble Crab alone, Urchin alone, Current alone, Dart Fish alone) before one
+  2-element combo as its climax; finalExam (beat 8, screens 28-32) is a genuinely different texture -
+  every screen layers 2-3 already-taught elements simultaneously (current-boosted crab gauntlet,
+  a 3-element dart-fish-mid-current ambush, a first-ever double-Bubble-Crab screen, a valve-gated
+  urchin drop), never repeating escalation's one-at-a-time shape. Verified mechanically, not by eye:
+  the generator computes each screen's (enemy+hazard+gimmick) signature as it places entities and
+  fails the build if any two *consecutive* screens share one - 0 violations across all 34 screens.
+  Encounter density: 18 regular-enemy placements / 34 screens = 1.89 screens/encounter, inside the
+  §2.6/§2.7 1.5-2.0 target band (also enforced as a build-failing check, not just reported after the
+  fact).
+- **Problem 2 (water gimmick vanishing after screen ~19) fixed with a genuinely new mechanic for the
+  setpiece: `RisingWaterZone`.** A water surface that starts at the ascent shaft's bottom and climbs
+  at a steady rate once triggered (entering the shaft's own vertical-camera zone), capping at a
+  ceiling row - anyone below the current surface gets float physics plus a gentle *upward* push. It's
+  explicitly an assist, not a hazard (0 damage, matches GDD §3b's currents rule) - falling behind the
+  rising water helps the player catch up rather than punishing them, so it can't create an unfair
+  "outrun the water or die" scenario the base kit (no dash) couldn't clear. This directly answers the
+  GDD §3.2 "rising-water ascent... or current-driven descent" prompt for the setpiece's signature
+  water moment, chosen over the descent option because the ascent shaft was already a separate
+  mandatory §2.6 requirement - solving both with one setpiece is more efficient than building two
+  unrelated signature moments. The gimmick's actual reach is checked mechanically: the generator
+  collects every screen that places a `waterValve`/`current`/`risingWaterZone` and fails the build if
+  beat 6 (setpiece) or beat 8 (finalExam) has none - both now do (screens 20-21 rising water; screens
+  28/29/30/32 current or a reused valve/gate). The gimmick touches every beat from tutorial (2) through
+  pre-boss (9); only intro (1) is gimmick-free, matching the GDD §2.6 template's own intent ("sells
+  the theme," not the mechanic yet - Speedway's intro is equally gimmick-free).
+- **`updateWater()` folds the rising-water zone into the SAME submerged/push accumulator as gates and
+  currents**, not a separate call that could silently overwrite an already-computed current push if
+  the two ever overlapped in the same screen (they don't, in this map, but the bug would have been
+  latent and easy to reintroduce later). Caught and fixed while wiring the scene, before it shipped.
+- **Problem 3 (no branch & rejoin) fixed at screen 18**: a real fork within one screen's column span -
+  upper flooded gallery (a current, a Bubble Crab, 2 pickups) directly above a continuous lower drained
+  crawl (a Toxic Urchin, the Body Capsule pump), both spanning the same columns and both leading into
+  screen 19 without requiring backtracking. Reuses the exact step-up/rejoin geometry the original M4.1
+  build already had proven safe (48px step, within the 56px/3.5-tile max jump ceiling) - this problem
+  was really about content/variety inside the branch, not its underlying physics, which didn't need
+  re-deriving.
+- **Problem 4 (monotonic slope) fixed by interleaving R and D through beats 2-3 instead of running
+  them in long blocks**, and by giving finalExam its own internal D-R-U-R-D wiggle rather than letting
+  it just continue whatever direction the setpiece left off in. Recomputed stats from the actual
+  generated sequence (not carried over from the old build): **52.9% vertical** (18/34, still well
+  above the ≥35% floor and higher than the original M4.1's 51.4%), **max consecutive same-direction
+  run: 3** (hit twice, never exceeded), **23 dominant-direction changes** (vs. the ≥4 floor). The new
+  §2.7 "no more than 3 consecutive near-zero-vertical-variation (flat) screens" check is satisfied too
+  - max flat (`R`-tagged) run is 2, well under the cap; the full per-screen surface-row table is in the
+  PR's §2.7 report, not just the aggregate stats, so a monotonic slope hiding behind good aggregate
+  numbers can't happen unnoticed. **Named terrain-feature ranges** (all state-derived from the actual
+  segment log, not eyeballed): controlled descent = screens 5-7 (three staged, readable-landing legs,
+  the beat 2 tutorial's second half); ascent shaft = screens 20-24 (5 screens, water-active 20-21,
+  dry 22-24); multi-floor room = screen 16 (3-tier, 2 valve/gate pairs); branch & rejoin = screen 18.
+- **Max gap width: 0 tiles - an honest, unchanged finding from this repo's own prior audit, not
+  something this rebuild was asked to fix.** Every flat (`R`-tagged) screen's floor is unbroken except
+  valve-gated openings (which aren't "jump gaps," they're binary open/closed passages); all real
+  traversal challenges are vertical-shaft ledge-to-ledge drops or valve-gated drops, each individually
+  checked against the base-kit (no-dash) jump-reach ceiling established in Speedway's own bugfix log
+  (max flat jump ≈ 63.5-68.5px available vs. the 48-64px this map's ledges actually require - 25-40%
+  margin, not pixel-perfect).
+- **Verification.** Typecheck/lint/format/110 tests (unchanged - no new pure-logic surface beyond
+  `RisingWaterZone`, which is Phaser-only like `Current`/`WaterGate` and so isn't unit-tested, matching
+  their precedent)/build all clean. The generator itself now fails its own build (not just warns) on
+  any §2.7 regression: screen-count range, vertical %, max run, direction changes, ground-anchor
+  placement, consecutive-signature duplicates, density band, and setpiece/finalExam gimmick coverage
+  are all hard `throw`s, so a future edit that reintroduces any of the four original problems breaks
+  `node scripts/generate-reservoir-map.mjs` immediately instead of shipping quietly. Live-browser
+  verification (temporary `window.__debugGame` hook, reverted before commit - `git diff src/main.ts`
+  empty in the final tree): a real 9-second blind run with actual keyboard input from stage start
+  through tutorial/escalation/mid-boss and into remix with zero errors; both multi-floor gates toggle
+  correctly; a full rising-water-zone stress-drive through the entire ascent shaft (182 real animation
+  frames, same technique as the earlier camera-margin stress test) confirms the trigger fires and the
+  zone runs its full climb without error; the Tide Manta ritual → Volt Chain weakness-hit (16→12 HP,
+  forced `stunned`) sequence still passes, confirming the terrain rebuild didn't disturb boss wiring.
+  Zero console/page errors throughout.
+
 ## Bugfix (P1) — camera let the player get too close to / off the screen edge at transitions
 
 - **Root cause #1 (the actual GDD §2.6 violation): no hard floor under the deadzone/lerp follow.**

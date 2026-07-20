@@ -11,11 +11,13 @@ import { BossDoor } from '@/actors/BossDoor';
 import { EnergyPickupStub } from '@/actors/EnergyPickupStub';
 import { Current } from '@/actors/hazards/Current';
 import { ToxicUrchin } from '@/actors/hazards/ToxicUrchin';
+import { RisingWaterZone } from '@/actors/hazards/RisingWaterZone';
 import { WaterValve } from '@/actors/WaterValve';
 import { WaterGate } from '@/actors/WaterGate';
 import { BodyCapsuleStub } from '@/actors/BodyCapsuleStub';
 import { BodyCapsulePump } from '@/actors/BodyCapsulePump';
 import { toxicUrchinTuning } from '@/config/enemyTuning';
+import { TILE_SIZE } from '@/config/playerTuning';
 
 const ARENA_MARGIN = 24;
 const BOSS_DOOR_SEAL_MS = 600;
@@ -44,6 +46,13 @@ export class ReservoirScene extends BaseStageScene {
   private readonly gates: WaterGate[] = [];
   private readonly gatesByName = new Map<string, WaterGate>();
   private readonly pendingValveLinks: { valve: WaterValve; targetGateName: string }[] = [];
+
+  // GDD §2.7 problem 2 fix: the setpiece's rising-water moment. Triggered
+  // once the player enters the ascent shaft's own vertical-camera zone
+  // (reused as the trigger - no separate zone needed).
+  private readonly risingWaterZones: RisingWaterZone[] = [];
+  private ascentShaftZoneRef: Phaser.GameObjects.Zone | null = null;
+  private risingWaterTriggered = false;
 
   protected readonly entityRegistry: Record<string, EntitySpawner> = {
     dartFish: (_scene, x, y) => {
@@ -123,6 +132,20 @@ export class ReservoirScene extends BaseStageScene {
       const zone = this.add.zone(x, y, object.width, object.height);
       this.physics.add.existing(zone, true);
       this.registerVerticalCameraZone(zone);
+      this.ascentShaftZoneRef = zone;
+    },
+
+    risingWaterZone: (_scene, x, _y, object) => {
+      const bottomRow = getObjectProperty(object, 'bottomRow', 0);
+      const ceilingRow = getObjectProperty(object, 'ceilingRow', 0);
+      const zone = new RisingWaterZone(
+        this,
+        x,
+        object.width,
+        bottomRow * TILE_SIZE,
+        ceilingRow * TILE_SIZE,
+      );
+      this.risingWaterZones.push(zone);
     },
 
     bossDoor: (_scene, x, _y, object) => {
@@ -196,6 +219,25 @@ export class ReservoirScene extends BaseStageScene {
         pushY += current.pushY;
       }
     }
+
+    // GDD §2.7 problem 2: the setpiece's rising-water moment (see
+    // RisingWaterZone) - folded into the same submerged/push accumulator
+    // as gates/currents above so overlapping both at once combines
+    // correctly instead of one silently overwriting the other.
+    if (!this.risingWaterTriggered && this.ascentShaftZoneRef) {
+      if (this.physics.overlap(this.player.hurtboxZone, this.ascentShaftZoneRef)) {
+        this.risingWaterTriggered = true;
+        for (const zone of this.risingWaterZones) zone.trigger();
+      }
+    }
+    for (const zone of this.risingWaterZones) {
+      zone.fixedUpdate();
+      if (zone.overlaps(this.player.x, this.player.y)) {
+        submerged = true;
+        pushY += zone.pushY;
+      }
+    }
+
     this.player.setSubmerged(submerged);
     this.player.applyCurrentPush(pushX, pushY);
 
