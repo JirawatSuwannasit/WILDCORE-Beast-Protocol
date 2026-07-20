@@ -3,6 +3,72 @@
 Running log of deviations from `docs/GDD.md`, and judgment calls made where a requirement was
 ambiguous. One entry per decision, newest first.
 
+## M4.1-REBUILD-2 — Coral Reservoir: the ground layer itself, re-authored by hand
+
+- **Why this exists.** M4.1-REBUILD was rejected: it reused the same three deterministic
+  `screenR`/`screenD`/`screenU` shape primitives unchanged, just reordering which screen got which
+  enemy/gimmick content, and by coincidence kept the same total vertical-screen count leading into the
+  ascent shaft/multi-floor room/branch as the pre-rebuild file - so the raw ground tiles in those
+  regions came out byte-identical (just shifted a few columns), even though the *entity* content had
+  genuinely changed. The rejection was verified independently, not taken on faith: a scratch script
+  scans the `ground` tilelayer's raw GID array directly (columns, not the generator's own segment
+  bookkeeping) for GID=2 (`TOP`, written only by `fillFloor`/`fillLedge`, never by `fillWall`) to get a
+  ground-truth surface-row-per-column profile, then locates each mandatory feature via an independent
+  entity anchor (`ascentShaftZone`, `gate-multifloor-A`, `bodyCapsulePump` - all pre-existing in both
+  files) and diffs the sampled rows. That confirmed the ascent shaft and multi-floor room were
+  identical, just relabeled.
+- **The fix: new terrain, not renamed terrain.** This rebuild introduces genuinely different ground
+  shapes (`screenDStair` - a solid 4-step staircase, no gaps; `screenDSheer` - one big 8-tile fall, one
+  mid-landing, a 4-tile fall to floor - alongside the pre-existing `screenDChute` zigzag and
+  `screenUShaft` wall-kick gap), deliberately changes the vertical-screen composition (10 descents / 7
+  ascents, vs. the rejected build's 13/5-6) specifically so cumulative row totals can't coincidentally
+  land on the same absolute rows again, corrects a 3-slot/2-gap bookkeeping mismatch in the multi-floor
+  room (it only has 2 real 12-tile gaps between its 3 tiers, not 3), widens the branch from 1 screen to
+  a genuine 2-screen/40-tile span with both bands (upper flooded gallery, lower drained crawl)
+  continuous the whole way, and extends the ascent shaft to 6 full wall-kick legs (72 tiles of climb,
+  one plateau break to respect the run-length cap). A new `motif` axis (separate from the §2.6
+  direction axis) is tracked per screen and mechanically checked: no ledge/gap pattern may repeat more
+  than 3 screens consecutively - build-failing, not just reported.
+- **Verified by re-running the same independent raw-tile audit against this build, not just re-running
+  the generator's own checks.** Per-screen surface height (`rowExit`, sampled independently at each
+  screen's own column range) matches the pre-rebuild baseline at **0 of 34 comparable screens (0%)**,
+  comfortably under the "redo it" threshold of 30%. The ascent shaft region's raw sampled surface-row
+  sequence is now `[140,·,128,128,·,116,116,·,104×7,·,92,92,·,80,80,·,68]` (72-tile total delta) vs.
+  the pre-rebuild `[164,·,152,152,·,140,140,·,128×7,·,116]` (48-tile delta) - different rows, different
+  climb length, not a shifted copy. The multi-floor room's raw floor rows are `104, 128` here vs. `140,
+  152` before. The branch region now genuinely shows **two simultaneous TOP rows at the same columns**
+  (125 and 128, 3 rows/48px apart) across its full width - confirmed by direct per-column tile scan,
+  not just the generator's own bookkeeping.
+- **A branch-widening bug found and fixed during that same audit.** The first draft of the widened
+  branch used `fillFloor(..., upperRow, 3)` for the upper gallery's floor - a nonzero fill depth that,
+  since `upperRow` and `lowerRow` are only 3 rows apart, buried the lower crawl's headroom and its own
+  TOP tile in solid fill, collapsing what should have been two separate bands into one. Fixed with
+  `depth=0` for the upper floor, the same fix already used for the multi-floor room's `topRow`/`midRow`
+  tiers - confirmed after the fix that both bands are simultaneously walkable (raw tile scan shows both
+  TOP rows present at every column across the span, and a live-browser walkthrough crosses both bands
+  end-to-end without falling through).
+- **A pre-existing, stage-breaking collision bug found during live-browser verification, present
+  identically in the already-shipped pre-rebuild file - not something this rebuild introduced, but too
+  severe to ship without fixing.** Every `screenDChute`/`screenDStair`/`screenDSheer` entry/exit
+  "backstop" wall was computed as `wallTop = rowStart - 6` (or `-4`), i.e. starting several tiles
+  *above* the floor the player is already standing on when walking in from the previous screen. Since
+  Arcade collision doesn't distinguish `FILL` from `TOP` (`setCollisionByExclusion([-1])` - both solid),
+  that buried the entry/exit floor mid-wall with no reachable approach: a player walking flat into the
+  very first descent (screen 3) hits solid rock and is fully blocked, and even a max-height jump (3.5
+  tiles, per `playerTuning.jump.maxHeightTiles`) can't clear a wall that starts 6 tiles above their
+  head. Confirmed via a live headless-browser walkthrough of the *unmodified* pre-rebuild file at the
+  identical screen - same dead stop, same coordinates. Fixed by starting each backstop wall exactly at
+  its own floor's row (entry wall at `rowStart`, exit wall at `rowEnd`) instead of several tiles above
+  it - matching how every other floor primitive (`screenR`, the ledges) already works, with nothing
+  else above a floor's own row unless something is deliberately built there. Re-verified live: the
+  player now walks straight through what was previously a hard wall and free-falls into the descent as
+  intended. The wall-kick ascent shaft's own multi-leg chaining (`screenUShaft`, unchanged from the
+  Speedway-proven pattern) showed the same kind of embedded-floor geometry on paper, but its pillars
+  must stay tall for wall-kicking (can't apply the same fix without deleting the kick surfaces); a
+  scripted bot could get the player engaging both walls and gaining some height but couldn't be made to
+  chain a full clean climb inside headless-browser input-timing limits - flagged here rather than
+  claimed as fully verified; recommend a manual playtest pass focused specifically on the shaft.
+
 ## M4.1-REBUILD — Coral Reservoir re-authored for GDD §2.7 content/terrain variety
 
 - **Starting point and a discrepancy worth recording.** The rebuild request described the pre-rebuild
