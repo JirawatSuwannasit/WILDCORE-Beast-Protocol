@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { THEME } from '@/config/theme';
 import { getRectTexture } from '@/systems/placeholderTexture';
 import { waterGateTuning } from '@/config/enemyTuning';
+import { waterTuning } from '@/config/waterTuning';
 
 /**
  * GDD §3.2 signature gimmick: "water level raises/lowers on valves;
@@ -42,7 +43,8 @@ export class WaterGate {
 
     this.waterVisual = scene.add
       .rectangle(x, y, width, this.open ? height : 1, THEME.accentTeal, 0.4)
-      .setVisible(this.open);
+      .setVisible(this.open)
+      .setDepth(waterTuning.renderDepth);
 
     this.zone = scene.add.zone(x, y, width, height);
     scene.physics.add.existing(this.zone, true);

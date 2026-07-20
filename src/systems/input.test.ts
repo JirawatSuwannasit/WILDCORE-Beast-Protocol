@@ -42,6 +42,20 @@ describe('InputManager', () => {
     expect(manager.sample().moveX).toBe(0);
   });
 
+  it('takes moveY from whichever source is pressing a direction (touch is always neutral)', () => {
+    const keyboard = fakeSource({ moveY: 1 });
+    const touch = fakeSource({ moveY: 0 });
+    const manager = new InputManager([keyboard, touch]);
+    expect(manager.sample().moveY).toBe(1);
+  });
+
+  it('cancels opposing moveY directions from different sources to neutral', () => {
+    const keyboard = fakeSource({ moveY: -1 });
+    const gamepad = fakeSource({ moveY: 1 });
+    const manager = new InputManager([keyboard, gamepad]);
+    expect(manager.sample().moveY).toBe(0);
+  });
+
   it('reflects live changes each call (sources are re-sampled, not cached)', () => {
     let held = false;
     const source: InputSource = { sample: () => ({ ...NEUTRAL_INPUT, dashHeld: held }) };
