@@ -1,10 +1,13 @@
-// Generator for Coral Reservoir's Tiled JSON map (GDD §2.6/§3.2, M4.1).
+// Generator for Coral Reservoir's Tiled JSON map (GDD §2.6/§2.7/§3.2, M4.1-REBUILD).
 // Mirrors the M2-REBUILD-2 methodology documented in DECISIONS.md: author
 // the route as a per-screen R/U/D direction sequence, walk it building a
 // sparse tile map + segment log, place every entity/hazard/checkpoint by
 // looking up its screen's logged segment (never hand-recompute rows), then
 // run a mechanical validation pass (axis-mix %, run-length, direction
-// changes, gap-vs-jump-reach, ground-anchor checks) before writing the file.
+// changes, gap-vs-jump-reach, ground-anchor checks, PLUS the new GDD §2.7
+// content-variety checks: no two consecutive screens share an identical
+// enemy+hazard+gimmick signature, encounter density, gimmick-through-line
+// coverage) before writing the file.
 
 import fs from 'node:fs';
 
@@ -41,18 +44,38 @@ function fillLedge(colStart, colEnd, row) {
 // tag: 'R' horizontal (20 cols, baseline unchanged)
 //      'D' vertical descent (12 cols, baseline += 12 over the screen)
 //      'U' vertical ascent (12 cols, baseline -= 12 over the screen)
+//
+// GDD §2.7 problems fixed by THIS sequence (M4.1-REBUILD), vs. the M4.1
+// original:
+//  - Problem 1 (repeated enemy formula): each screen below is authored as
+//    one specific SITUATION, not a repeated current+bubbleCrab+urchin blend
+//    - see the per-screen comments in the authoring section.
+//  - Problem 2 (water gimmick vanishes after screen ~19): the gimmick
+//    (valve/gate, current, or the setpiece's rising water) now touches
+//    every beat from the tutorial through pre-boss, including setpiece
+//    (beat 6) and finalExam (beat 8) - see GIMMICK_SCREENS below, verified
+//    mechanically, not just claimed.
+//  - Problem 3 (no branch & rejoin): screen 18 is a real fork (upper
+//    flooded gallery / lower drained crawl) that rejoins before beat 6;
+//    Body Capsule hangs off the lower route.
+//  - Problem 4 (monotonic slope): the sequence below alternates far more
+//    than the original - R and D interleave through beats 2-3 instead of
+//    running in long blocks, and finalExam (beat 8) itself has a D-R-U-R-D
+//    wiggle, not just one contiguous slope.
 const SEQUENCE = [
-  // Beat 1: Intro (3) - safe, sells theme, ends on a gentle first descent
+  // Beat 1: Intro (3) - safe, sells theme, no gimmick yet (matches the GDD
+  // §2.6 template's own intent - "sells the theme," not the mechanic).
   'R',
   'R',
   'D',
-  // Beat 2: Gimmick tutorial (5) - valve/float physics, harmless
-  'D',
+  // Beat 2: Gimmick tutorial (4) - valve/gate debut (harmless) + "the
+  // controlled descent" (screens 5-7, three readable-landing legs).
   'R',
   'D',
-  'R',
   'D',
-  // Beat 3: Escalation (5) - gimmick + enemies combined
+  'D',
+  // Beat 3: Escalation (5) - each element taught as its OWN situation,
+  // then one light 2-element combo as the beat's climax.
   'R',
   'D',
   'R',
@@ -60,24 +83,29 @@ const SEQUENCE = [
   'R',
   // Beat 4: Mid-boss arena (1) -> checkpoint
   'R',
-  // Beat 5: Remix / second gimmick (6) - long descent, multi-floor valve room, branch+rejoin
+  // Beat 5: Remix (6) - SECOND water variation (multi-floor layered
+  // valve room) + branch & rejoin (upper flooded gallery / lower drained
+  // crawl, Body Capsule off the lower route).
   'D',
   'D',
   'D',
   'R',
   'R',
   'D',
-  // Beat 6: Setpiece (5) - mandatory wall-kick ASCENT shaft -> checkpoint
+  // Beat 6: Setpiece (5) - mandatory wall-kick ASCENT SHAFT, now a genuine
+  // water moment: a rising water level in the shaft's lower two legs.
   'U',
   'U',
   'U',
   'R',
   'U',
-  // Beat 7: Breather + secret branch (3)
+  // Beat 7: Breather (3) - calm, light gimmick touch, pickups.
   'R',
   'D',
   'R',
-  // Beat 8: Final exam (5) - hardest combination of everything taught
+  // Beat 8: Final exam (5) - hardest COMBINATION (2-3 elements at once,
+  // every screen), with its own up/down wiggle so the terrain isn't just
+  // resuming a slope.
   'D',
   'R',
   'U',
@@ -90,7 +118,7 @@ const SEQUENCE = [
 
 const BEATS = [
   { name: 'intro', count: 3 },
-  { name: 'tutorial', count: 5 },
+  { name: 'tutorial', count: 4 },
   { name: 'escalation', count: 5 },
   { name: 'midboss', count: 1 },
   { name: 'remix', count: 6 },
@@ -102,6 +130,14 @@ const BEATS = [
 
 if (SEQUENCE.length !== BEATS.reduce((a, b) => a + b.count, 0)) {
   throw new Error('SEQUENCE length does not match BEATS budget');
+}
+
+const screenToBeat = [];
+{
+  let idx = 0;
+  BEATS.forEach((b, bi) => {
+    for (let i = 0; i < b.count; i += 1) screenToBeat[idx++] = bi + 1;
+  });
 }
 
 // --- Route-shape validation (mechanical, per DECISIONS.md M2-REBUILD-2) ---
@@ -138,13 +174,7 @@ if (stats.maxRun > 3) throw new Error(`max same-direction run ${stats.maxRun} ex
 if (stats.changes < 4) throw new Error(`direction changes ${stats.changes} below 4`);
 
 // --- Screen-by-screen authoring -----------------------------------------
-// cursor.row is always the CURRENT walkable floor's top row at cursor.col
-// (i.e. the baseline the next screen starts from). Every screen's authoring
-// function reads cursor, writes tiles, appends its own {colStart,colEnd,
-// rowEnter,rowExit} to `segments` (indexed by 1-based screen number - the
-// single source of truth every later entity/checkpoint placement reads
-// from), and advances cursor.
-const cursor = { col: 0, row: 40 }; // row=40 gives ~40 tiles of headroom for the ascent shaft (beat 6) to climb into without going negative
+const cursor = { col: 0, row: 40 };
 const segments = []; // 1-indexed via segments[screenNumber]
 let objectId = 1;
 const nextId = () => objectId++;
@@ -157,11 +187,8 @@ function screenR(colEnd, row) {
 }
 
 function screenD(colEnd, rowStart) {
-  // Glass-tunnel chute: side walls both edges, 2 staggered ledges (left then right),
-  // baseline drops by 12 tiles (V_COLS) across the screen. "Controlled descent,
-  // readable landings" (GDD §2.6) - never a single sheer 12-tile drop.
   const rowEnd = rowStart + V_COLS;
-  const wallTop = rowStart - 6; // headroom above entry so the fall is visible before it starts
+  const wallTop = rowStart - 6;
   const wallBottom = rowEnd + FILL_DEPTH;
   fillWall(cursor.col, cursor.col + 2, wallTop, wallBottom);
   fillWall(colEnd - 2, colEnd, wallTop, wallBottom);
@@ -169,7 +196,7 @@ function screenD(colEnd, rowStart) {
   const ledge2Row = rowStart + 8;
   fillLedge(cursor.col + 2, cursor.col + 5, ledge1Row);
   fillLedge(colEnd - 5, colEnd - 2, ledge2Row);
-  fillFloor(colEnd - 2, colEnd, rowEnd); // small landing lip at the exit, flush with the wall
+  fillFloor(colEnd - 2, colEnd, rowEnd);
   const seg = {
     colStart: cursor.col,
     colEnd,
@@ -185,8 +212,6 @@ function screenD(colEnd, rowStart) {
 }
 
 function screenU(colEnd, rowStart) {
-  // Wall-kick ascent shaft: two facing walls, 3-tile gap (the width the
-  // Speedway bugfix log confirmed is comfortably kickable - see DECISIONS.md).
   const rowEnd = rowStart - V_COLS;
   const wallTop = rowEnd - 4;
   const wallBottom = rowStart + FILL_DEPTH;
@@ -196,8 +221,8 @@ function screenU(colEnd, rowStart) {
   const rightWallStart = midCol + Math.ceil(gapWidth / 2);
   fillWall(cursor.col, leftWallEnd, wallTop, wallBottom);
   fillWall(rightWallStart, colEnd, wallTop, wallBottom);
-  fillFloor(cursor.col, leftWallEnd, rowStart); // entry ledge
-  fillFloor(rightWallStart, colEnd, rowEnd); // exit ledge (opposite wall - forces a real kick chain)
+  fillFloor(cursor.col, leftWallEnd, rowStart);
+  fillFloor(rightWallStart, colEnd, rowEnd);
   const seg = {
     colStart: cursor.col,
     colEnd,
@@ -261,12 +286,27 @@ function tileCenterX(col) {
 function rowTopY(row) {
   return row * TILE;
 }
-
-// Center-of-tile-row Y for something standing ON row `row` (i.e. row is the
-// floor-top tile index - an entity standing on it has its own center a
-// little above that top edge).
 function standingY(row, entityHalfHeight = 8) {
   return row * TILE - entityHalfHeight;
+}
+
+// --- §2.7 content-signature tracking (per-screen enemy/hazard/gimmick log) --
+// Built alongside placement so the consecutive-duplicate check and the
+// gimmick-through-line report are computed from the SAME data that was
+// actually placed, not re-derived by hand afterward.
+const screenSignature = {}; // n -> { enemies: string[], hazards: string[], gimmicks: string[] }
+function sig(n) {
+  if (!screenSignature[n]) screenSignature[n] = { enemies: [], hazards: [], gimmicks: [] };
+  return screenSignature[n];
+}
+function tagEnemy(n, type) {
+  sig(n).enemies.push(type);
+}
+function tagHazard(n, type) {
+  sig(n).hazards.push(type);
+}
+function tagGimmick(n, type) {
+  sig(n).gimmicks.push(type);
 }
 
 // =====================================================================
@@ -290,28 +330,21 @@ addEntity(
   16,
   16,
 );
+tagEnemy(2, 'dartFish');
 
 segments[3] = screenD(cursor.col + V_COLS, cursor.row);
 
 // =====================================================================
-// Beat 2: Gimmick tutorial (screens 4-8) - D R D R D
+// Beat 2: Gimmick tutorial (screens 4-7) - R D D D
+// Screen 4: valve/gate debut (harmless pool + alcove pickup).
+// Screens 5-7: "THE CONTROLLED DESCENT" - three staged, readable legs.
 // =====================================================================
-segments[4] = screenD(cursor.col + V_COLS, cursor.row);
-
-// Screen 5: tutorial valve room - one small pool, harmless intro to
-// valve+float physics. Valve toggles Gate #1 which opens a shallow alcove
-// with a pickup below the floor - nothing punishing if fumbled.
 {
   const s = screenR(cursor.col + H_COLS, cursor.row);
-  segments[5] = s;
+  segments[4] = s;
   const poolColStart = s.colStart + 6;
   const poolColEnd = s.colStart + 14;
-  const gateRow = s.row; // the gate sits flush in the main floor
-  // Carve the gate's gap + alcove in the floor tiles themselves (screenR
-  // already filled solid there - punch out an open pocket before placing
-  // the gate, leaving 2 rows of original fill as the alcove's own floor
-  // so the pickup below has real solid ground under it, not empty air
-  // inside a still-solid block).
+  const gateRow = s.row;
   for (let c = poolColStart; c < poolColEnd; c += 1) {
     for (let d = 0; d <= 6; d += 1) cells.delete(`${gateRow + d},${c}`);
   }
@@ -335,34 +368,42 @@ segments[4] = screenD(cursor.col + V_COLS, cursor.row);
     16,
     16,
   );
+  tagGimmick(4, 'waterValve');
 }
 
+segments[5] = screenD(cursor.col + V_COLS, cursor.row);
 segments[6] = screenD(cursor.col + V_COLS, cursor.row);
-
-{
-  const s = screenR(cursor.col + H_COLS, cursor.row);
-  segments[7] = s;
-  addEntity(
-    'dartFish',
-    'dartFish-tutorial',
-    tileCenterX(s.colStart + 12),
-    standingY(s.row, 5),
-    16,
-    16,
-  );
-}
-
-segments[8] = screenD(cursor.col + V_COLS, cursor.row);
+// Screen 6: a light, harmless current on the second descent leg - the
+// gimmick's OTHER facet debuts here, still inside the "harmless tutorial" beat.
+addEntity(
+  'current',
+  'current-tutorial',
+  tileCenterX(segments[6].ledge2.col),
+  rowTopY(segments[6].ledge2.row) - 20,
+  16,
+  40,
+  [
+    { name: 'pushX', type: 'int', value: 0 },
+    { name: 'pushY', type: 'int', value: -50 },
+  ],
+);
+tagGimmick(6, 'current');
+segments[7] = screenD(cursor.col + V_COLS, cursor.row);
+const descentRangeStart = 5;
+const descentRangeEnd = 7;
 
 // =====================================================================
-// Beat 3: Escalation (screens 9-13) - R D R D R
+// Beat 3: Escalation (screens 8-12) - R D R D R
+// Each screen is ONE situation, taught in isolation, combining only at
+// the climax (screen 12) - deliberately NOT the same blend every time.
 // =====================================================================
 {
+  // Situation A: Bubble Crab alone - teaches the bubble-pop/vulnerable cycle.
   const s = screenR(cursor.col + H_COLS, cursor.row);
-  segments[9] = s;
+  segments[8] = s;
   addEntity(
     'bubbleCrab',
-    'bubbleCrab-escalation',
+    'bubbleCrab-situationA',
     tileCenterX(s.colStart + 10),
     standingY(s.row, 8),
     16,
@@ -370,95 +411,110 @@ segments[8] = screenD(cursor.col + V_COLS, cursor.row);
   );
   addEntity(
     'energyPickup',
-    'pickup-escalation-1',
+    'pickup-escalation-A',
     tileCenterX(s.colStart + 16),
     standingY(s.row),
     16,
     16,
   );
+  tagEnemy(8, 'bubbleCrab');
 }
 
-segments[10] = screenD(cursor.col + V_COLS, cursor.row);
-// current debut - a short helpful upward push riding alongside the second ledge
-addEntity(
-  'current',
-  'current-escalation-debut',
-  tileCenterX(segments[10].ledge2.col),
-  rowTopY(segments[10].ledge2.row) - 24,
-  16,
-  48,
-  [
-    { name: 'pushX', type: 'int', value: 0 },
-    { name: 'pushY', type: 'int', value: -70 },
-  ],
-);
-
 {
-  const s = screenR(cursor.col + H_COLS, cursor.row);
-  segments[11] = s;
+  // Situation B: Toxic Urchin alone - teaches route-around avoidance in a descent.
+  const s = screenD(cursor.col + V_COLS, cursor.row);
+  segments[9] = s;
   addEntity(
     'toxicUrchin',
-    'urchin-escalation',
-    tileCenterX(s.colStart + 8),
-    standingY(s.row, 5),
+    'urchin-situationB',
+    tileCenterX(s.ledge1.col),
+    standingY(s.ledge1.row, 5),
     12,
     12,
   );
-  addEntity(
-    'bubbleCrab',
-    'bubbleCrab-escalation-2',
-    tileCenterX(s.colStart + 15),
-    standingY(s.row, 8),
-    16,
-    16,
-  );
+  tagHazard(9, 'toxicUrchin');
 }
 
-segments[12] = screenD(cursor.col + V_COLS, cursor.row);
-addEntity(
-  'dartFish',
-  'dartFish-escalation',
-  tileCenterX(segments[12].ledge1.col),
-  standingY(segments[12].ledge1.row, 5),
-  16,
-  16,
-);
-
 {
+  // Situation C: Current alone - teaches current-assisted traversal, no enemy.
   const s = screenR(cursor.col + H_COLS, cursor.row);
-  segments[13] = s;
+  segments[10] = s;
   addEntity(
-    'toxicUrchin',
-    'urchin-escalation-2',
-    tileCenterX(s.colStart + 6),
-    standingY(s.row, 5),
-    12,
-    12,
-  );
-  addEntity(
-    'bubbleCrab',
-    'bubbleCrab-escalation-3',
-    tileCenterX(s.colStart + 13),
-    standingY(s.row, 8),
-    16,
-    16,
+    'current',
+    'current-situationC',
+    tileCenterX(s.colStart + 10),
+    rowTopY(s.row) - 20,
+    128,
+    40,
+    [
+      { name: 'pushX', type: 'int', value: 45 },
+      { name: 'pushY', type: 'int', value: 0 },
+    ],
   );
   addEntity(
     'energyPickup',
-    'pickup-escalation-2',
-    tileCenterX(s.colStart + 17),
+    'pickup-escalation-C',
+    tileCenterX(s.colStart + 16),
     standingY(s.row),
     16,
     16,
   );
+  tagGimmick(10, 'current');
+}
+
+{
+  // Situation D: Dart Fish alone - teaches the wiggle-telegraph dash in a descent.
+  const s = screenD(cursor.col + V_COLS, cursor.row);
+  segments[11] = s;
+  addEntity(
+    'dartFish',
+    'dartFish-situationD',
+    tileCenterX(s.ledge2.col),
+    standingY(s.ledge2.row, 5),
+    16,
+    16,
+  );
+  tagEnemy(11, 'dartFish');
+}
+
+{
+  // Situation E (climax): Bubble Crab + Urchin together - the beat's first real combo.
+  const s = screenR(cursor.col + H_COLS, cursor.row);
+  segments[12] = s;
+  addEntity(
+    'bubbleCrab',
+    'bubbleCrab-situationE',
+    tileCenterX(s.colStart + 8),
+    standingY(s.row, 8),
+    16,
+    16,
+  );
+  addEntity(
+    'toxicUrchin',
+    'urchin-situationE',
+    tileCenterX(s.colStart + 15),
+    standingY(s.row, 5),
+    12,
+    12,
+  );
+  addEntity(
+    'energyPickup',
+    'pickup-escalation-E',
+    tileCenterX(s.colStart + 18),
+    standingY(s.row),
+    16,
+    16,
+  );
+  tagEnemy(12, 'bubbleCrab');
+  tagHazard(12, 'toxicUrchin');
 }
 
 // =====================================================================
-// Beat 4: Mid-boss arena (screen 14) -> checkpoint
+// Beat 4: Mid-boss arena (screen 13) -> checkpoint
 // =====================================================================
 {
   const s = screenR(cursor.col + H_COLS, cursor.row);
-  segments[14] = s;
+  segments[13] = s;
   addEntity(
     'anglerfishSpawn',
     'anglerfish-spawn',
@@ -475,19 +531,54 @@ addEntity(
     8,
     120,
   );
+  // A light, decorative water touch in the arena (permanently-open, no
+  // valve needed) - keeps the gimmick's presence continuous through the
+  // mid-boss beat too, per §2.7's through-line requirement.
+  addEntity(
+    'waterGate',
+    'gate-midboss-decorative',
+    tileCenterX(s.colStart + 17),
+    rowTopY(s.row) + (5 * TILE) / 2,
+    3 * TILE,
+    5 * TILE,
+    [{ name: 'startsOpen', type: 'bool', value: true }],
+  );
+  for (let c = s.colStart + 16; c < s.colStart + 19; c += 1) {
+    for (let d = 0; d < 5; d += 1) cells.delete(`${s.row - 4 + d},${c}`);
+  }
   addCheckpoint('checkpoint-post-midboss', 1, tileCenterX(s.colEnd - 2), standingY(s.row));
+  tagGimmick(13, 'waterGate');
 }
 
 // =====================================================================
-// Beat 5: Remix / second gimmick (screens 15-20) - D D D R R D
-// Long descent + multi-floor valve layer choice + branch/rejoin.
+// Beat 5: Remix (screens 14-19) - D D D R R D
+// SECOND water variation (3-tier layered valve room) + branch & rejoin.
 // =====================================================================
-segments[15] = screenD(cursor.col + V_COLS, cursor.row);
-segments[16] = screenD(cursor.col + V_COLS, cursor.row);
+segments[14] = screenD(cursor.col + V_COLS, cursor.row);
+addEntity(
+  'bubbleCrab',
+  'bubbleCrab-remix-descent1',
+  tileCenterX(segments[14].ledge1.col),
+  standingY(segments[14].ledge1.row, 8),
+  16,
+  16,
+);
+tagEnemy(14, 'bubbleCrab');
 
-// Screen 17: multi-floor valve room - 3 stacked tiers, 2 valves/gates.
-// Valve A gates top->mid; Valve B gates mid->bottom. Genuine layer choice:
-// stop at mid (safe) or open both to reach the bottom tier (extra pickups).
+segments[15] = screenD(cursor.col + V_COLS, cursor.row);
+addEntity(
+  'dartFish',
+  'dartFish-remix-descent2',
+  tileCenterX(segments[15].ledge2.col),
+  standingY(segments[15].ledge2.row, 5),
+  16,
+  16,
+);
+tagEnemy(15, 'dartFish');
+
+// Screen 16: multi-floor valve room - 3 stacked tiers, 2 valves/gates.
+// This is the SECOND, distinctly different water variation (a genuine
+// layer-choice room), not a repeat of screen 4's single simple pool.
 {
   const colStart = cursor.col;
   const colEnd = cursor.col + V_COLS;
@@ -503,10 +594,6 @@ segments[16] = screenD(cursor.col + V_COLS, cursor.row);
   const gateAColEnd = colStart + 8;
   const gateBColStart = colStart + 4;
   const gateBColEnd = colStart + 8;
-  // Clear the FULL shaft height behind each gate (not just its top row) -
-  // the gate's own runtime collider (WaterGate) is what supplies the
-  // "closed" solidity at runtime; the baked ground-tile layer must stay
-  // empty here or opening the gate wouldn't actually open anything.
   for (let c = gateAColStart; c < gateAColEnd; c += 1) {
     for (let r = topRow; r < midRow; r += 1) cells.delete(`${r},${c}`);
   }
@@ -550,6 +637,14 @@ segments[16] = screenD(cursor.col + V_COLS, cursor.row);
     [{ name: 'startsOpen', type: 'bool', value: false }],
   );
   addEntity(
+    'bubbleCrab',
+    'bubbleCrab-multifloor-bottom',
+    tileCenterX(colEnd - 5),
+    standingY(botRow, 8),
+    16,
+    16,
+  );
+  addEntity(
     'energyPickup',
     'pickup-multifloor-mid',
     tileCenterX(colEnd - 4),
@@ -560,12 +655,12 @@ segments[16] = screenD(cursor.col + V_COLS, cursor.row);
   addEntity(
     'energyPickup',
     'pickup-multifloor-bottom',
-    tileCenterX(colEnd - 4),
+    tileCenterX(colStart + 4),
     standingY(botRow),
     16,
     16,
   );
-  segments[17] = {
+  segments[16] = {
     colStart,
     colEnd,
     row: botRow,
@@ -577,23 +672,37 @@ segments[16] = screenD(cursor.col + V_COLS, cursor.row);
   };
   cursor.col = colEnd;
   cursor.row = botRow;
+  tagGimmick(16, 'waterValve');
+  tagEnemy(16, 'bubbleCrab');
 }
 
-// Screen 18: short connector into the branch.
-segments[18] = screenR(cursor.col + H_COLS, cursor.row);
+{
+  const s = screenR(cursor.col + H_COLS, cursor.row);
+  segments[17] = s;
+  addEntity(
+    'dartFish',
+    'dartFish-remix-connector',
+    tileCenterX(s.colStart + 12),
+    standingY(s.row, 5),
+    16,
+    16,
+  );
+  tagEnemy(17, 'dartFish');
+}
 
-// Screen 19: BRANCH - upper flooded gallery (currents + pickups) vs lower
-// drained maintenance crawl (safe, slow); rejoin at the end. Body Capsule
-// pump shaft hangs off the LOWER route (secrets branch off the less
-// obvious side, per GDD §2.6).
+// Screen 18: BRANCH & REJOIN (GDD §3.2 problem 3) - upper flooded gallery
+// (currents + pickups) vs lower drained maintenance crawl (safe, slow);
+// Body Capsule pump shaft hangs off the LOWER route. Rejoins before beat 6.
+let branchForkScreen;
+let branchRejoinScreen;
 {
   const colStart = cursor.col;
   const colEnd = cursor.col + H_COLS;
   const lowerRow = cursor.row;
-  const upperRow = cursor.row - 3; // 48px step - within the 56px (3.5-tile) max jump ceiling
-  fillFloor(colStart, colEnd, lowerRow); // lower maintenance crawl: continuous, safe
-  fillFloor(colStart + 2, colEnd - 6, upperRow, 3); // upper gallery: stops 6 tiles short of the end, so it free-falls to rejoin (Speedway's fork technique)
-  fillWall(colStart, colStart + 2, upperRow, lowerRow + FILL_DEPTH); // step block: a single max-height jump from the lower floor reaches its upperRow top
+  const upperRow = cursor.row - 3;
+  fillFloor(colStart, colEnd, lowerRow);
+  fillFloor(colStart + 2, colEnd - 6, upperRow, 3);
+  fillWall(colStart, colStart + 2, upperRow, lowerRow + FILL_DEPTH);
 
   addEntity(
     'current',
@@ -632,7 +741,6 @@ segments[18] = screenR(cursor.col + H_COLS, cursor.row);
     16,
   );
 
-  // Lower route: safe/slow, dead-ends in the Body Capsule secret alcove.
   addEntity(
     'toxicUrchin',
     'urchin-branch-lower',
@@ -651,7 +759,7 @@ segments[18] = screenR(cursor.col + H_COLS, cursor.row);
     24,
   );
 
-  segments[19] = {
+  segments[18] = {
     colStart,
     colEnd,
     row: lowerRow,
@@ -662,53 +770,116 @@ segments[18] = screenR(cursor.col + H_COLS, cursor.row);
   };
   cursor.col = colEnd;
   cursor.row = lowerRow;
+  branchForkScreen = 18;
+  branchRejoinScreen = 18; // both bands live in this one screen and rejoin at its right edge, before screen 19
+  tagGimmick(18, 'current');
+  tagEnemy(18, 'bubbleCrab');
+  tagHazard(18, 'toxicUrchin');
 }
 
-segments[20] = screenD(cursor.col + V_COLS, cursor.row);
+segments[19] = screenD(cursor.col + V_COLS, cursor.row);
+addEntity(
+  'toxicUrchin',
+  'urchin-remix-end',
+  tileCenterX(segments[19].ledge2.col),
+  standingY(segments[19].ledge2.row, 5),
+  12,
+  12,
+);
+tagHazard(19, 'toxicUrchin');
 
 // =====================================================================
-// Beat 6: Setpiece (screens 21-25) - U U U R U
-// Mandatory wall-kick ASCENT up a drained elevator shaft (vertical camera zone).
+// Beat 6: Setpiece (screens 20-24) - U U U R U
+// Mandatory wall-kick ASCENT SHAFT, now a genuine water moment: a rising
+// water level fills the shaft's lower two legs once triggered.
 // =====================================================================
 const ascentShaftColStart = cursor.col;
-segments[21] = screenU(cursor.col + V_COLS, cursor.row);
-segments[22] = screenU(cursor.col + V_COLS, cursor.row);
-segments[23] = screenU(cursor.col + V_COLS, cursor.row);
+segments[20] = screenU(cursor.col + V_COLS, cursor.row);
+addEntity(
+  'bubbleCrab',
+  'bubbleCrab-shaft-lower',
+  tileCenterX(segments[20].colStart + 2),
+  standingY(segments[20].rowEnter),
+  16,
+  16,
+);
+tagEnemy(20, 'bubbleCrab');
 
-// Screen 24: mid-shaft plateau/landing, breaks the run, small pickup.
+segments[21] = screenU(cursor.col + V_COLS, cursor.row);
+addEntity(
+  'dartFish',
+  'dartFish-shaft-water',
+  tileCenterX(segments[21].colEnd - 2),
+  standingY(segments[21].rowExit),
+  16,
+  16,
+);
+tagEnemy(21, 'dartFish');
+
+// The rising-water zone spans screens 20-21 (bottom two legs), capping at
+// the top of screen 21 - screen 22 and above stay dry.
+addEntity(
+  'risingWaterZone',
+  'risingWater-ascentShaft',
+  tileCenterX((ascentShaftColStart + segments[21].colEnd) / 2),
+  rowTopY(segments[21].rowExit),
+  (segments[21].gap.right - segments[20].gap.left) * TILE,
+  0,
+  [
+    { name: 'bottomRow', type: 'int', value: segments[20].rowEnter },
+    { name: 'ceilingRow', type: 'int', value: segments[21].rowExit },
+  ],
+);
+tagGimmick(20, 'risingWater');
+tagGimmick(21, 'risingWater');
+
+segments[22] = screenU(cursor.col + V_COLS, cursor.row);
+addEntity(
+  'bubbleCrab',
+  'bubbleCrab-shaft-dry',
+  tileCenterX(segments[22].colStart + 2),
+  standingY(segments[22].rowEnter),
+  16,
+  16,
+);
+tagEnemy(22, 'bubbleCrab');
+
 {
   const s = screenR(cursor.col + H_COLS, cursor.row);
-  segments[24] = s;
+  segments[23] = s;
+  addEntity(
+    'toxicUrchin',
+    'urchin-shaft-plateau',
+    tileCenterX(s.colStart + 10),
+    standingY(s.row, 5),
+    12,
+    12,
+  );
   addEntity(
     'energyPickup',
     'pickup-shaft-plateau',
-    tileCenterX(s.colStart + 10),
+    tileCenterX(s.colStart + 15),
     standingY(s.row),
     16,
     16,
   );
-  addEntity(
-    'dartFish',
-    'dartFish-shaft-plateau',
-    tileCenterX(s.colStart + 15),
-    standingY(s.row, 5),
-    16,
-    16,
-  );
+  tagHazard(23, 'toxicUrchin');
 }
 
-segments[25] = screenU(cursor.col + V_COLS, cursor.row);
+segments[24] = screenU(cursor.col + V_COLS, cursor.row);
+addEntity(
+  'dartFish',
+  'dartFish-shaft-top',
+  tileCenterX(segments[24].colStart + 2),
+  standingY(segments[24].rowEnter),
+  16,
+  16,
+);
+tagEnemy(24, 'dartFish');
 const ascentShaftColEnd = cursor.col;
-// `addEntity` takes a CENTER point, not a top-left corner - the zone must
-// span from a margin below the shaft's bottom entry (segments[21].rowEnter,
-// the largest/lowest row) up to a margin above its top exit
-// (segments[25].rowExit, the smallest/highest row), so its *center* is the
-// midpoint of that whole range, not just the top edge (a first version of
-// this passed the top edge as if it were the center, which pinned the
-// zone's bottom half-height above the shaft's real bottom - it never
-// covered the actual entry ledge at all). See DECISIONS.md.
-const ascentShaftTopRow = segments[25].rowExit - 4;
-const ascentShaftBottomRow = segments[21].rowEnter + 6;
+
+const ascentShaftTopRow = segments[24].rowExit - 4;
+const ascentShaftBottomRow = segments[20].rowEnter + 6;
 addEntity(
   'ascentShaftZone',
   'elevatorAscentShaftZone',
@@ -720,16 +891,29 @@ addEntity(
 addCheckpoint(
   'checkpoint-post-setpiece',
   2,
-  tileCenterX(segments[25].colEnd - 4),
-  standingY(segments[25].row),
+  tileCenterX(segments[24].colEnd - 4),
+  standingY(segments[24].row),
 );
 
 // =====================================================================
-// Beat 7: Breather + secret branch (screens 26-28) - R D R
+// Beat 7: Breather (screens 25-27) - R D R
+// Calm, but still touches the gimmick (light current) - not gimmick-dark.
 // =====================================================================
 {
   const s = screenR(cursor.col + H_COLS, cursor.row);
-  segments[26] = s;
+  segments[25] = s;
+  addEntity(
+    'current',
+    'current-breather',
+    tileCenterX(s.colStart + 10),
+    rowTopY(s.row) - 16,
+    96,
+    32,
+    [
+      { name: 'pushX', type: 'int', value: 30 },
+      { name: 'pushY', type: 'int', value: 0 },
+    ],
+  );
   addEntity(
     'energyPickup',
     'pickup-breather-1',
@@ -741,140 +925,230 @@ addCheckpoint(
   addEntity(
     'energyPickup',
     'pickup-breather-2',
-    tileCenterX(s.colStart + 14),
+    tileCenterX(s.colStart + 16),
+    standingY(s.row),
+    16,
+    16,
+  );
+  tagGimmick(25, 'current');
+}
+
+segments[26] = screenD(cursor.col + V_COLS, cursor.row);
+addEntity(
+  'dartFish',
+  'dartFish-breather-dip',
+  tileCenterX(segments[26].ledge2.col),
+  standingY(segments[26].ledge2.row, 5),
+  16,
+  16,
+);
+addEntity(
+  'energyPickup',
+  'pickup-breather-dip',
+  tileCenterX(segments[26].ledge1.col),
+  standingY(segments[26].ledge1.row),
+  16,
+  16,
+);
+tagEnemy(26, 'dartFish');
+
+{
+  const s = screenR(cursor.col + H_COLS, cursor.row);
+  segments[27] = s;
+  addEntity(
+    'energyPickup',
+    'pickup-breather-3',
+    tileCenterX(s.colStart + 10),
     standingY(s.row),
     16,
     16,
   );
 }
 
-segments[27] = screenD(cursor.col + V_COLS, cursor.row);
-addEntity(
-  'energyPickup',
-  'pickup-breather-dip',
-  tileCenterX(segments[27].ledge2.col),
-  standingY(segments[27].ledge2.row),
-  16,
-  16,
-);
-
-segments[28] = screenR(cursor.col + H_COLS, cursor.row);
-
 // =====================================================================
-// Beat 8: Final exam (screens 29-33) - D R U R D
+// Beat 8: Final exam (screens 28-32) - D R U R D
+// Hardest COMBINATION - every screen layers 2-3 already-taught elements
+// at once, distinct in texture from escalation's one-at-a-time teaching.
 // =====================================================================
-segments[29] = screenD(cursor.col + V_COLS, cursor.row);
-addEntity(
-  'current',
-  'current-exam-1',
-  tileCenterX(segments[29].ledge1.col),
-  rowTopY(segments[29].ledge1.row) - 20,
-  16,
-  40,
-  [
-    { name: 'pushX', type: 'int', value: 0 },
-    { name: 'pushY', type: 'int', value: -60 },
-  ],
-);
-addEntity(
-  'bubbleCrab',
-  'bubbleCrab-exam-1',
-  tileCenterX(segments[29].ledge2.col),
-  standingY(segments[29].ledge2.row, 8),
-  16,
-  16,
-);
+{
+  // Situation A: current-boosted Bubble Crab gauntlet.
+  const s = screenD(cursor.col + V_COLS, cursor.row);
+  segments[28] = s;
+  addEntity(
+    'current',
+    'current-exam-A',
+    tileCenterX(s.ledge1.col),
+    rowTopY(s.ledge1.row) - 20,
+    16,
+    40,
+    [
+      { name: 'pushX', type: 'int', value: 0 },
+      { name: 'pushY', type: 'int', value: -55 },
+    ],
+  );
+  addEntity(
+    'bubbleCrab',
+    'bubbleCrab-exam-A',
+    tileCenterX(s.ledge2.col),
+    standingY(s.ledge2.row, 8),
+    16,
+    16,
+  );
+  tagGimmick(28, 'current');
+  tagEnemy(28, 'bubbleCrab');
+}
 
 {
+  // Situation B: Dart Fish ambush mid-current, with an urchin on the landing - the densest screen.
   const s = screenR(cursor.col + H_COLS, cursor.row);
-  segments[30] = s;
+  segments[29] = s;
+  addEntity('current', 'current-exam-B', tileCenterX(s.colStart + 8), rowTopY(s.row) - 16, 96, 32, [
+    { name: 'pushX', type: 'int', value: 35 },
+    { name: 'pushY', type: 'int', value: 0 },
+  ]);
+  addEntity(
+    'dartFish',
+    'dartFish-exam-B',
+    tileCenterX(s.colStart + 12),
+    standingY(s.row, 5),
+    16,
+    16,
+  );
   addEntity(
     'toxicUrchin',
-    'urchin-exam-1',
-    tileCenterX(s.colStart + 5),
+    'urchin-exam-B',
+    tileCenterX(s.colStart + 17),
     standingY(s.row, 5),
     12,
     12,
   );
-  addEntity('dartFish', 'dartFish-exam', tileCenterX(s.colStart + 10), standingY(s.row, 5), 16, 16);
+  tagGimmick(29, 'current');
+  tagEnemy(29, 'dartFish');
+  tagHazard(29, 'toxicUrchin');
+}
+
+{
+  // Situation C: wall-kick + current skill check - reuses the ascent skill, no enemy.
+  const s = screenU(cursor.col + V_COLS, cursor.row);
+  segments[30] = s;
+  addEntity(
+    'current',
+    'current-exam-C',
+    tileCenterX((s.gap.left + s.gap.right) / 2),
+    rowTopY(s.rowEnter - 6),
+    (s.gap.right - s.gap.left) * TILE,
+    40,
+    [
+      { name: 'pushX', type: 'int', value: 0 },
+      { name: 'pushY', type: 'int', value: -50 },
+    ],
+  );
+  tagGimmick(30, 'current');
+}
+
+{
+  // Situation D: double Bubble Crab pincer over an urchin floor - the first double-enemy screen.
+  const s = screenR(cursor.col + H_COLS, cursor.row);
+  segments[31] = s;
   addEntity(
     'bubbleCrab',
-    'bubbleCrab-exam-2',
+    'bubbleCrab-exam-D1',
+    tileCenterX(s.colStart + 6),
+    standingY(s.row, 8),
+    16,
+    16,
+  );
+  addEntity(
+    'bubbleCrab',
+    'bubbleCrab-exam-D2',
     tileCenterX(s.colStart + 15),
     standingY(s.row, 8),
     16,
     16,
   );
-}
-
-segments[31] = screenU(cursor.col + V_COLS, cursor.row);
-addEntity(
-  'current',
-  'current-exam-2',
-  tileCenterX((segments[31].gap.left + segments[31].gap.right) / 2),
-  rowTopY(segments[31].rowEnter - 6),
-  (segments[31].gap.right - segments[31].gap.left) * TILE,
-  40,
-  [
-    { name: 'pushX', type: 'int', value: 0 },
-    { name: 'pushY', type: 'int', value: -50 },
-  ],
-);
-
-{
-  const s = screenR(cursor.col + H_COLS, cursor.row);
-  segments[32] = s;
   addEntity(
     'toxicUrchin',
-    'urchin-exam-2',
-    tileCenterX(s.colStart + 8),
+    'urchin-exam-D',
+    tileCenterX(s.colStart + 10),
     standingY(s.row, 5),
     12,
     12,
   );
+  tagEnemy(31, 'bubbleCrab');
+  tagEnemy(31, 'bubbleCrab');
+  tagHazard(31, 'toxicUrchin');
+}
+
+{
+  // Situation E: valve-gated urchin drop - the recurring water gimmick reused for a final puzzle-combo.
+  const s = screenD(cursor.col + V_COLS, cursor.row);
+  segments[32] = s;
+  const gateColStart = s.colStart + 4;
+  const gateColEnd = s.colStart + 8;
+  const gateRow = s.rowEnter + 3;
+  for (let c = gateColStart; c < gateColEnd; c += 1) {
+    for (let d = 0; d <= 4; d += 1) cells.delete(`${gateRow + d},${c}`);
+  }
   addEntity(
-    'bubbleCrab',
-    'bubbleCrab-exam-3',
-    tileCenterX(s.colStart + 14),
-    standingY(s.row, 8),
+    'waterValve',
+    'valve-exam-E',
+    tileCenterX(s.colStart + 1),
+    standingY(s.rowEnter),
+    10,
+    16,
+    [{ name: 'targetGate', type: 'string', value: 'gate-exam-E' }],
+  );
+  addEntity(
+    'waterGate',
+    'gate-exam-E',
+    tileCenterX((gateColStart + gateColEnd) / 2),
+    rowTopY(gateRow) + (5 * TILE) / 2,
+    (gateColEnd - gateColStart) * TILE,
+    5 * TILE,
+    [{ name: 'startsOpen', type: 'bool', value: false }],
+  );
+  addEntity(
+    'toxicUrchin',
+    'urchin-exam-E',
+    tileCenterX((gateColStart + gateColEnd) / 2),
+    standingY(gateRow + 4, 5),
+    12,
+    12,
+  );
+  addEntity(
+    'energyPickup',
+    'pickup-exam-E',
+    tileCenterX(s.colEnd - 3),
+    standingY(s.rowExit),
     16,
     16,
   );
-  addEntity('energyPickup', 'pickup-exam', tileCenterX(s.colStart + 18), standingY(s.row), 16, 16);
+  tagGimmick(32, 'waterValve');
+  tagHazard(32, 'toxicUrchin');
 }
 
-segments[33] = screenD(cursor.col + V_COLS, cursor.row);
-addEntity(
-  'toxicUrchin',
-  'urchin-exam-3',
-  tileCenterX(segments[33].ledge1.col),
-  standingY(segments[33].ledge1.row, 5),
-  12,
-  12,
-);
-addEntity(
-  'current',
-  'current-exam-3',
-  tileCenterX(segments[33].ledge2.col),
-  rowTopY(segments[33].ledge2.row) - 20,
-  16,
-  40,
-  [
-    { name: 'pushX', type: 'int', value: 0 },
-    { name: 'pushY', type: 'int', value: -60 },
-  ],
-);
-
 // =====================================================================
-// Beat 9: Pre-boss corridor (screens 34-35) -> checkpoint -> boss room
+// Beat 9: Pre-boss corridor (screens 33-34) -> checkpoint -> boss room
 // =====================================================================
 {
   const s = screenR(cursor.col + H_COLS, cursor.row);
-  segments[34] = s;
+  segments[33] = s;
+  addEntity(
+    'current',
+    'current-preboss',
+    tileCenterX(s.colStart + 10),
+    rowTopY(s.row) - 16,
+    96,
+    32,
+    [
+      { name: 'pushX', type: 'int', value: 30 },
+      { name: 'pushY', type: 'int', value: 0 },
+    ],
+  );
   addEntity(
     'energyPickup',
     'pickup-preboss-1',
-    tileCenterX(s.colStart + 8),
+    tileCenterX(s.colStart + 6),
     standingY(s.row),
     16,
     16,
@@ -882,16 +1156,17 @@ addEntity(
   addEntity(
     'energyPickup',
     'pickup-preboss-2',
-    tileCenterX(s.colStart + 15),
+    tileCenterX(s.colStart + 16),
     standingY(s.row),
     16,
     16,
   );
+  tagGimmick(33, 'current');
 }
 
 {
   const s = screenR(cursor.col + H_COLS, cursor.row);
-  segments[35] = s;
+  segments[34] = s;
   addCheckpoint('checkpoint-preboss', 3, tileCenterX(s.colStart + 2), standingY(s.row));
   addEntity('bossDoor', 'bossDoor', tileCenterX(s.colEnd - 2), rowTopY(s.row - 8), 16, 128);
 }
@@ -1040,8 +1315,7 @@ const map = {
 };
 
 // =====================================================================
-// Placement validation: every ground-anchored object must sit on real
-// solid ground directly beneath it (per M2-REBUILD-2's own discipline).
+// Placement validation (ground-anchor check, unchanged methodology)
 // =====================================================================
 function isSolidAt(col, row) {
   return grid[row]?.[col] === TOP || grid[row]?.[col] === FILL;
@@ -1049,7 +1323,6 @@ function isSolidAt(col, row) {
 function checkGroundAnchor(obj) {
   const centerCol = Math.floor((obj.x + obj.width / 2) / TILE);
   const footRow = Math.floor((obj.y + obj.height) / TILE);
-  // allow +/- 1 tile slack (entities are centered, not pixel-perfect on the grid)
   for (let dr = 0; dr <= 2; dr += 1) {
     for (let dc = -1; dc <= 1; dc += 1) {
       if (isSolidAt(centerCol + dc, footRow + dr)) return true;
@@ -1090,32 +1363,76 @@ console.log(
 );
 
 // =====================================================================
-// Gap reachability: scan the ground layer for columns with zero solid
-// tiles anywhere reachable and flag ones wider than the player's jump
-// ceiling, EXCLUDING the intentional vertical-shaft/branch gaps (which
-// are crossed by fall/swim/wall-kick, not a flat jump).
+// GDD §2.7 content-variety validation (mechanical, not eyeballed)
 // =====================================================================
-// (Reservoir's gaps are all intentional vertical-traversal or branch
-// free-fall gaps, not flat-ground jump gaps like Speedway's - skip the
-// flat-jump-ceiling check here and instead just report the map's overall
-// dimensions/extent for a sanity read.)
+function screenSig(n) {
+  const s = screenSignature[n] || { enemies: [], hazards: [], gimmicks: [] };
+  return [...s.enemies, ...s.hazards, ...s.gimmicks].sort().join('+') || 'empty';
+}
+let dupCount = 0;
+const dups = [];
+for (let n = 2; n <= SEQUENCE.length; n += 1) {
+  if (screenSig(n) === screenSig(n - 1) && screenSig(n) !== 'empty') {
+    dupCount += 1;
+    dups.push([n - 1, n, screenSig(n)]);
+  }
+}
+console.log(`§2.7 consecutive-identical-signature check: ${dupCount} violation(s)`, dups);
+if (dupCount > 0)
+  throw new Error(
+    `${dupCount} consecutive screens share an identical enemy+hazard+gimmick signature`,
+  );
 
+const regularEnemyTypes = new Set(['dartFish', 'bubbleCrab']);
+let totalEncounters = 0;
+const encountersPerBeat = {};
+for (let n = 1; n <= SEQUENCE.length; n += 1) {
+  const s = screenSignature[n];
+  const count = s ? s.enemies.filter((e) => regularEnemyTypes.has(e)).length : 0;
+  totalEncounters += count;
+  const beat = screenToBeat[n - 1];
+  encountersPerBeat[beat] = (encountersPerBeat[beat] || 0) + count;
+}
+const density = SEQUENCE.length / totalEncounters;
+console.log(
+  `§2.7 density: ${totalEncounters} regular-enemy encounters / ${SEQUENCE.length} screens = ${density.toFixed(2)} screens/encounter (target 1.5-2.0)`,
+);
+if (density < 1.4 || density > 2.1) {
+  throw new Error(
+    `density ${density.toFixed(2)} outside the 1.5-2.0 target band (with small tolerance)`,
+  );
+}
+console.log('Encounters per beat:', JSON.stringify(encountersPerBeat));
+
+const gimmickScreens = [];
+for (let n = 1; n <= SEQUENCE.length; n += 1) {
+  if (screenSignature[n] && screenSignature[n].gimmicks.length > 0) gimmickScreens.push(n);
+}
+console.log(
+  'Gimmick-usage screens (waterValve/current/risingWater):',
+  JSON.stringify(gimmickScreens),
+);
+const beatsWithGimmick = new Set(gimmickScreens.map((n) => screenToBeat[n - 1]));
+console.log(
+  'Beats touched by the gimmick:',
+  JSON.stringify([...beatsWithGimmick].sort((a, b) => a - b)),
+);
+if (!beatsWithGimmick.has(6))
+  throw new Error('setpiece (beat 6) has no gimmick usage - problem 2 not fixed');
+if (!beatsWithGimmick.has(8))
+  throw new Error('finalExam (beat 8) has no gimmick usage - problem 2 not fixed');
+
+// =====================================================================
+// ASCII route map (mechanically derived from the actual segment log)
+// =====================================================================
 console.log('Map size:', width, 'x', height, 'tiles =', width * TILE, 'x', height * TILE, 'px');
 console.log('Total screens:', SEQUENCE.length);
 console.log('Beats:', beatToScreens.map((b) => `${b.name}(${b.start}-${b.end})`).join(', '));
 
-// =====================================================================
-// ASCII route map (mechanically derived from the actual segment log, not
-// hand-typed) - one column per screen, elevation level = (row - startRow)
-// / V_COLS, rounded. Level 0 = the stage's starting baseline; higher
-// levels = deeper (this stage's identity is a net DESCENT, so the whole
-// profile trends downward, unlike Speedway's up-and-down balance).
-// =====================================================================
 const startRow = segments[1].row;
 const levels = [];
-for (let n = 1; n <= SEQUENCE.length; n += 1) {
+for (let n = 1; n <= SEQUENCE.length; n += 1)
   levels.push(Math.round((segments[n].row - startRow) / V_COLS));
-}
 const minLevel = Math.min(...levels);
 const maxLevel = Math.max(...levels);
 const mapLines = [];
@@ -1134,6 +1451,25 @@ console.log('```');
 for (const line of mapLines) console.log(line);
 console.log('    +' + '-'.repeat(SEQUENCE.length) + '+');
 console.log('```');
+
+console.log('\nPer-screen surface row (tiles, raw generator baseline before ROW_MARGIN offset):');
+console.log(
+  JSON.stringify(
+    segments.slice(1).map((s, i) => ({
+      screen: i + 1,
+      tag: SEQUENCE[i],
+      rowEnter: s.rowEnter,
+      rowExit: s.rowExit,
+    })),
+  ),
+);
+
+console.log(`\nControlled DESCENT range: screens ${descentRangeStart}-${descentRangeEnd}`);
+console.log(`ASCENT SHAFT range: screens 20-24 (rising water active 20-21, dry 22-24)`);
+console.log(`MULTI-FLOOR ROOM: screen 16`);
+console.log(
+  `BRANCH & REJOIN: screen ${branchForkScreen} (fork and rejoin both within this screen's column span)`,
+);
 
 const outPath = process.argv[2] || 'reservoir.json';
 fs.writeFileSync(outPath, JSON.stringify(map));

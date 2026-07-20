@@ -22,4 +22,18 @@ export const waterTuning = {
   current: {
     bubbleTelegraphIntervalFrames: 18,
   },
+
+  /**
+   * M4.1-REBUILD (GDD §2.7 problem 2): the setpiece's signature water
+   * moment - a rising water level in the wall-kick ascent shaft. Purely an
+   * assist, never a hazard (0 damage, same as currents): touching it grants
+   * submerged float physics + a gentle upward push, so falling behind the
+   * rising water helps the player catch back up instead of punishing them.
+   */
+  risingWater: {
+    /** How fast the surface climbs once triggered (px/s). */
+    riseSpeedPxPerSec: 18,
+    /** Gentle upward assist applied while the player overlaps the rising water. */
+    pushY: -60,
+  },
 } as const;
