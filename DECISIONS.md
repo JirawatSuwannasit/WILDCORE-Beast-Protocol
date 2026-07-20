@@ -3,6 +3,120 @@
 Running log of deviations from `docs/GDD.md`, and judgment calls made where a requirement was
 ambiguous. One entry per decision, newest first.
 
+## M2-AUDIT-REBUILD — Speedway Savanna terrain rebuilt to the §2.6/§2.7/§3.1 standard
+
+- **Speedway predates §2.7 and was always hand-authored JSON.** Unlike Coral Reservoir
+  (`scripts/generate-reservoir-map.mjs`, built during M4.1's rebuilds), no generator ever existed for
+  `speedway.json` - M2/M2-REBUILD/M2-REBUILD-2/the base-kit-jump-reach bugfix all edited the map by
+  hand. M2-REBUILD-2's own writeup already flagged this as a known gap ("Speedway... doesn't currently
+  implement §2.6's anti-corridor rules... reworking Speedway's layout... is a separate, explicit
+  task"). This PR is that task: a new `scripts/generate-speedway-map.mjs`, built on the same
+  screen-shape-primitive + mechanical-validation discipline as Reservoir's rebuilds, re-authoring only
+  the ground layer and route shape - the boss (Volt Cheetah), enemy roster (Spark Bug, Patrol Drone,
+  Turret Sunflower), hazard roster (spikes, speed strips, electric fences, collapsing bridges),
+  checkpoint count/order, and 9-beat structure are all kept.
+- **Independent audit confirmed, not just re-asserted.** Re-ran the raw-tile top-solid-row scan
+  (the same ground-truth methodology from Reservoir's M4.1-REBUILD-2 audit, immune to trusting a
+  generator's or a prior PR's own internal bookkeeping) against the pre-existing `speedway.json`:
+  8.36 real (320px) screens tall, surface varying only 4.27 real screens, matching the PO's audit
+  almost exactly ("~8.4 screens tall", "surface varies only ~4.3 screens"). M2-REBUILD-2's own report
+  had claimed a 3-screen pylon shaft, a branch/rejoin, and a multi-floor room - all present as
+  entity/section *markers* (`ascentShaftZone`, `midBossPylon`, two elevation bands) but the raw ground
+  tiles told a different story: the map's real vertical range never materialized as real stacked
+  geometry, the same "internal label vs. real tile data" gap Reservoir hit twice.
+- **Two real reachability bugs found via raw-tile scans during this rebuild itself, not just in the
+  old map - a lesson worth restating.** Building a fresh generator from Reservoir's proven primitives
+  did not automatically produce safe geometry; two new primitives had bugs a live Playwright bot sweep
+  and manual raw-tile scans caught before merge:
+  1. `screenUStair` (the new ascending-staircase motif, no wall-kick required) used a `wallTop`
+     constant near the summit for BOTH its entry and exit backstop walls, extending solid fill from
+     high above the climb all the way down through the entry floor - a full impassable pillar right
+     at the screen boundary, blocking the flat walk-in entirely. This is the exact same bug class
+     documented repeatedly in Reservoir's rebuilds ("a wall starting above the row the player is
+     already standing on blocks the walk-in") but in a *new* primitive that hadn't been through that
+     lesson yet. Fixed by removing `wallTop` and mirroring `screenDStair`'s proven convention:
+     backstops start at their own floor's row and only extend down, never up.
+  2. `screenUShaft`'s wall-kick gap used `Math.ceil(gapWidth / 2)` on both sides of a center column,
+     which for the intended `gapWidth = 3` rounds up to a **4-tile (64px) real gap** on both branches
+     of the shaft - dangerously close to the ~68.5px max wall-kick reach with none of the ~30-40%
+     margin the base-kit jump-reach bugfix (see below) established as safe for a 48px (3-tile) gap.
+     A live Playwright chained-kick attempt against the buggy version free-fell straight through the
+     shaft to a checkpoint respawn. Fixed to compute the gap as exactly `gapWidth` tiles
+     (`rightWallStart = leftWallEnd + gapWidth`), verified via a raw-tile scan showing a clean 3-tile
+     gap on all 4 shaft legs (3 in the mandatory ascent, 1 reprise in finalExam) after the fix.
+  3. The turbine-tower branch had the player *arrive* at the lower band and placed the risky upper
+     blade-platforms 9 rows (144px) above that arrival point - well beyond the ~56px max jump height,
+     making the upper route physically unreachable from the fork's own entry (a bug in the branch's
+     row assignment, not a tile-fill bug). Fixed by making the preceding stair-ascent's summit land
+     the player directly on the upper band (so the first blade platform is reachable by simply walking
+     off the last tread) and placing the lower "safe" band 9 rows *below* arrival instead - reachable
+     the way a drop is always reachable (gravity does the work), never the way a climb needs to be.
+  4. The Legs Capsule's wall-kick alcove pillars stopped 4 rows (64px) short of the floor the player
+     stands on, leaving a gap wider than the max jump height with nothing to jump *from* - unreachable
+     even in principle. Fixed by extending both pillars down through the floor row itself (mirroring
+     the shaft's own "wall spans down through the entry/exit row" convention) and narrowing the
+     wall-kick gap between them from 4 to the proven-safe 3 tiles.
+  All four were caught by combining a raw ground-tile scan (not trusting entity/zone markers) with a
+  live headless-Playwright bot sweep from spawn to the boss door in two overlapping passes (one
+  covering intro→escalation→branch, one covering remix-plateau→setpiece→breather→finalExam→preboss,
+  since a single naive "hold right + tap jump" bot cannot itself execute a real wall-kick chain - see
+  the base-kit jump-reach bugfix's identical caveat about chained-kick timing needing a real device
+  playtest, restated here rather than re-litigated). Both sweeps traversed every non-wall-kick screen
+  cleanly (including the full branch fork→rejoin span and the multi-floor top/bottom tiers); the only
+  stalls were at wall-kick shaft legs (expected bot limitation) and one death to the escalation beat's
+  spikes before reaching a checkpoint (expected hazard behavior, correct respawn).
+- **§2.7 terrain-shape report** (mechanically validated by the generator on every run, not eyeballed):
+  - Vertical path: **40%** of the 35-screen sequence is U/D-tagged (14/35) - comfortably above the 35%
+    floor. Longest same-direction run: 3. Direction changes: 18.
+  - Ground surface (raw tile scan, real 320px screens, independent of the above): min-row range
+    17-77 (**5.33 real screens** of vertical range, up from the pre-existing map's 4.27), longest
+    near-flat run 3 real screens (at the limit, not exceeding it).
+  - **ASCENT SHAFT** (solar pylon, 3 wall-kick legs, `ascentShaftZone` + vertical camera zone):
+    real screens **13-15**.
+  - **CONTROLLED DESCENT** (high-speed boost-strip descent, the setpiece - distinct primitive
+    (`screenDBoost`, two wide treads) from Reservoir's water descent): real screens **18-21**.
+  - **MULTI-FLOOR ROOM** (highway underpass breather, 2 real screens of stacked road/drainage layers
+    with drop-through gaps, player picks a layer): real screens **21-23**.
+  - **BRANCH & REJOIN** (turbine tower: upper blade-platform route, floating ledges + patrol drones +
+    pickups, risky / lower fence-corridor route, continuous floor + electric fences, safe): fork at
+    real screen **9**, rejoin by real screen **10** (the upper band's floor stops short, so a player
+    still up top free-falls onto the lower band before the span ends - same "stop the floor early"
+    rejoin technique Reservoir's M4.1-REBUILD-3 branch used).
+  - Legs Capsule (no weapon gate) hangs off the breather's lower layer at real screen 24, via a
+    3-tile wall-kick gap now reaching down to the floor.
+  - Motif variety: 9 distinct ground shapes used (`flat`, `stairAscent`, `stairDescent`, `gap`,
+    `branch`, `shaft`, `boostDescent`, `sheerDescent`, `multiFloor`), longest same-motif run 3.
+  - Content variety: 0 consecutive-identical-signature violations; density 1.75 screens/encounter
+    (20 regular-enemy placements / 35 screens, inside the 1.5-2.0 target); the speed-strip/
+    collapsing-bridge gimmick touches beats 2, 5, 6 (setpiece), and 8 (finalExam) - the through-line
+    requirement.
+  - Fairness: every wall-kick gap is exactly 3 tiles (48px, the base-kit jump-reach bugfix's proven-
+    safe value); every flat-ground gap (`gap` motif, screens 7 and 29) is also 3 tiles. Base-kit
+    clearable throughout, no dash required.
+- **Before → after per-real-screen surface row** (raw tile scan, `min`/`max` = topmost solid tile row
+  in that 320px screen; BEFORE from the pre-existing map, AFTER from this rebuild):
+  - BEFORE (31 real screens, 8.36 screens tall, 4.27 screens of surface variance):
+    `[{"screen":1,"min":44},{"screen":2,"min":44},{"screen":3,"min":32},{"screen":4,"min":44},{"screen":5,"min":44},{"screen":6,"min":32},{"screen":7,"min":32},{"screen":8,"min":32},{"screen":9,"min":32},{"screen":10,"min":44},{"screen":11,"min":44},{"screen":12,"min":44},{"screen":13,"min":20},{"screen":14,"min":8},{"screen":15,"min":8},{"screen":16,"min":8},{"screen":17,"min":8},{"screen":18,"min":12},{"screen":19,"min":20},{"screen":20,"min":32},{"screen":21,"min":44},{"screen":22,"min":56},{"screen":23,"min":55},{"screen":24,"min":56},{"screen":25,"min":44},{"screen":26,"min":44},{"screen":27,"min":56},{"screen":28,"min":56},{"screen":29,"min":56},{"screen":30,"min":56},{"screen":31,"min":32}]`
+  - AFTER (32 real screens, 8.53 screens tall, 5.33 screens of surface variance):
+    `[{"screen":1,"min":44},{"screen":2,"min":44},{"screen":3,"min":32},{"screen":4,"min":32},{"screen":5,"min":32},{"screen":6,"min":44},{"screen":7,"min":44},{"screen":8,"min":32},{"screen":9,"min":32},{"screen":10,"min":32},{"screen":11,"min":47},{"screen":12,"min":53},{"screen":13,"min":41},{"screen":14,"min":29},{"screen":15,"min":17},{"screen":16,"min":17},{"screen":17,"min":17},{"screen":18,"min":17},{"screen":19,"min":35},{"screen":20,"min":41},{"screen":21,"min":61},{"screen":22,"min":65},{"screen":23,"min":65},{"screen":24,"min":67},{"screen":25,"min":77},{"screen":26,"min":65},{"screen":27,"min":65},{"screen":28,"min":77},{"screen":29,"min":77},{"screen":30,"min":77},{"screen":31,"min":77}]`
+  - The aggregate variance metric moved less than the qualitative fixes might suggest (4.27→5.33
+    screens, +25%) - most of the added height sits inside the mandatory ascent shaft and the deeper
+    branch separation, while several beats (intro, tutorial, pre-boss) stay deliberately near-flat for
+    pacing/readability, same as Reservoir's own beats do. The per-item §2.7 checklist above (not the
+    aggregate number alone) is the actual compliance signal, matching how §2.7 itself frames these as
+    separate checked items.
+- **Map grew in both dimensions.** 606×94 tiles (9,696×1,504px) → 622×96 tiles (9,952×1,536px) - wider
+  (the branch and multi-floor rooms both widened to genuine multi-screen spans, matching Reservoir's
+  precedent that a "room" claimed as multi-screen has to actually measure as one in raw tiles) and
+  taller (the fixed ascent shaft and deepened branch separation).
+- **`SpeedwayScene.ts`'s `BOSS_ROOM_FLOOR_Y`** updated from 888 to 1222 (now the exact value
+  in the regenerated map's own `bossSpawn` object-center Y) - read from generated map data rather than
+  hand-derived, the same discipline Reservoir's M4.1-REBUILD/M2-REBUILD already established for this
+  exact class of coordinate.
+- **Auto-merge intentionally left off this PR** per the request - this is a terrain rebuild of an
+  already-shipped, already-merged stage, and the PO asked to audit the regenerated JSON before it
+  lands.
+
 ## Debug tool — path-line nav aid replaces the single nearest-landmark readout
 
 - **What was actually there before this.** The request described upgrading "the debug navigation aid
