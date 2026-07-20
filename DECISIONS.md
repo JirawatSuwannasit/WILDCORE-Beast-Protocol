@@ -3,6 +3,49 @@
 Running log of deviations from `docs/GDD.md`, and judgment calls made where a requirement was
 ambiguous. One entry per decision, newest first.
 
+## Bugfix (P1) — Coral Reservoir water gimmick: player hidden and unable to submerge
+
+Two related GDD §3.2 "underwater float physics" failures around the setpiece's rising water
+(screen ~17), both in code that's been sitting unchanged since the water gimmick was first built.
+
+- **Visibility: water rendered in front of the player, not behind it.** `RisingWaterZone`'s fill
+  rectangle and `WaterGate`'s open-gate fill rectangle are both plain `scene.add.rectangle(...)`
+  calls with no explicit depth, so they default to depth 0 - same as the player's visual sprite
+  (`InterpolatedPhysicsSprite`, also undepthed). Phaser breaks same-depth ties by scene-add order,
+  and every water overlay is spawned during `setupEntities()`, which runs *after* `this.player = new
+  Player(...)` in `BaseStageScene.create()` - so water was always rendering on top of, not behind,
+  the player, making the player appear to vanish on entry. Fixed with a single shared constant,
+  `waterTuning.renderDepth = -1`, applied to both rectangles - keeps every water overlay behind
+  gameplay actors regardless of add order, without touching the player's own depth (so no other
+  actor's stacking order changes). Confirmed via a live-browser screenshot: the player sprite is
+  clearly visible on top of the water fill.
+- **Cannot submerge: the water's own "assist" push was an unbounded accelerator, not a gentle nudge.**
+  `RisingWaterZone.pushY` (-60) was being added directly onto `body.velocity.y` every fixed step for
+  as long as the player overlapped the zone, via the same `addCurrentPush`/`applyCurrentPush` path
+  used for brief current-hazard crossings. That's fine for a current you pass through in a handful of
+  frames, but the rising water is a large volume the player can sit inside for many seconds - with
+  nothing capping the result, the push compounded every tick into a runaway upward velocity (measured
+  in a scratch reproduction: -3600px/s² effective acceleration, dwarfing gravity), rocketing the
+  player to the ceiling and back down over and over - which reads exactly like "continuously
+  auto-jumps/bobs, can't sink." There was also no way to swim down at all: `InputSnapshot` had no
+  vertical axis, `jumpHeld` only ever gave an upward swim-kick, and gravity alone (already reduced by
+  the buoyancy multiplier) was the only downward force, easily overwhelmed by the uncapped push.
+  Fixed two ways: (1) added `waterTuning.buoyancy.maxRiseSpeedY` (150) and a new
+  `clampSubmergedVelocityY` helper (`waterPhysics.ts`) that bounds submerged velocity in *both*
+  directions, called last in `Player.fixedUpdate` (after gravity, jump kicks, and any current/water
+  push have all contributed) so it's the actual terminal speed for the frame, not an early check a
+  later push silently undoes; (2) added a `moveY: -1 | 0 | 1` axis to the shared `InputSnapshot`
+  (keyboard: arrow keys/WS; gamepad: D-pad/left-stick Y; touch sources report a fixed `0` - the
+  floating-stick and fixed-dpad touch controls are deliberately horizontal-only per their own
+  existing docs, and adding a vertical touch control is a mobile-UI design decision out of scope for
+  this bug) and a new `waterTuning.buoyancy.swimSpeedY` (60) - holding up/down while submerged now
+  directly sets `velocity.y` for that frame, the same constant-speed model horizontal movement
+  already uses, so swimming down is a deliberate, responsive action rather than something the player
+  has to wait on gravity for. Jump still gives the existing swim-kick stroke unchanged. Verified live:
+  holding down produces a steady, non-accelerating descent through the full water column; holding up
+  is the mirror; with no vertical input held, velocity now visibly bounds and oscillates near the cap
+  instead of running away without limit.
+
 ## M4.1-REBUILD-3 — multi-floor room widened, branch bands deepened, and a screen-numbering discrepancy resolved
 
 - **Why the PO's screen numbers ("screen 11", "screens 15-22") didn't match this repo's own report

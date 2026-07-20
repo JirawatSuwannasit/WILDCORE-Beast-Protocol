@@ -29,7 +29,8 @@ export class RisingWaterZone {
 
     this.visual = scene.add
       .rectangle(x, bottomY, width, 1, THEME.accentTeal, 0.4)
-      .setOrigin(0.5, 1);
+      .setOrigin(0.5, 1)
+      .setDepth(waterTuning.renderDepth);
   }
 
   trigger(): void {

@@ -8,7 +8,7 @@ import { EdgeDetector } from '@/systems/edgeDetector';
 import { computeJumpVelocities, applyJumpCut } from '@/systems/jumpPhysics';
 import {
   addCurrentPush,
-  capFallSpeed,
+  clampSubmergedVelocityY,
   selectJumpVelocity,
   submergedGravity,
 } from '@/systems/waterPhysics';
@@ -207,11 +207,6 @@ export class Player extends InterpolatedPhysicsSprite {
       body.setVelocityY(applyJumpCut(body.velocity.y, cutVelocity));
     }
 
-    // --- Underwater float physics (GDD §3.2): floatier terminal fall speed. ---
-    if (this.submerged && body.velocity.y > 0) {
-      body.setVelocityY(capFallSpeed(body.velocity.y, waterTuning.buoyancy.maxFallSpeedY));
-    }
-
     // --- Wall slide (X-style): airborne, touching a wall, falling. ---
     const wallSliding = onWall && body.velocity.y > playerTuning.wall.slideSpeed;
     if (wallSliding) {
@@ -272,6 +267,30 @@ export class Player extends InterpolatedPhysicsSprite {
         this.currentPushY,
       );
       body.setVelocity(pushed.x, pushed.y);
+    }
+
+    // --- Underwater float physics (GDD §3.2): swim up/down on demand, or a
+    // bounded passive float when no vertical input is held. Runs LAST, after
+    // gravity, jump kicks, and any current/rising-water push above have all
+    // contributed to velocity.y this step, so this is the actual terminal
+    // outcome for the frame rather than an early check a later push then
+    // silently overrides - that ordering mismatch was the P1 bug (player
+    // couldn't sink, just bobbed at the surface): a zone's push assist was
+    // being added to velocity.y every single fixed step for as long as the
+    // player overlapped it, snowballing into an ever-growing upward
+    // velocity with nothing left to cap it afterward. See waterPhysics.ts.
+    if (this.submerged) {
+      if (input.moveY !== 0) {
+        body.setVelocityY(input.moveY * waterTuning.buoyancy.swimSpeedY);
+      } else {
+        body.setVelocityY(
+          clampSubmergedVelocityY(
+            body.velocity.y,
+            waterTuning.buoyancy.maxFallSpeedY,
+            waterTuning.buoyancy.maxRiseSpeedY,
+          ),
+        );
+      }
     }
 
     this.syncHurtboxAndVisual();

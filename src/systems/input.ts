@@ -9,6 +9,12 @@
  */
 export interface InputSnapshot {
   moveX: -1 | 0 | 1;
+  /** -1 = up, 1 = down (matches world-space Y, same convention as gravity).
+   * Only meaningful underwater (GDD §3.2 "swim down") - dry-land movement
+   * ignores it entirely, same as moveX ignores jump. Touch sources report 0
+   * (deliberately horizontal-only, see FloatingStick.ts); keyboard and
+   * gamepad are the only sources that populate it. */
+  moveY: -1 | 0 | 1;
   jumpHeld: boolean;
   dashHeld: boolean;
   shootHeld: boolean;
@@ -18,6 +24,7 @@ export interface InputSnapshot {
 
 export const NEUTRAL_INPUT: InputSnapshot = {
   moveX: 0,
+  moveY: 0,
   jumpHeld: false,
   dashHeld: false,
   shootHeld: false,
@@ -41,6 +48,8 @@ export class InputManager implements InputSource {
   sample(): InputSnapshot {
     let left = false;
     let right = false;
+    let up = false;
+    let down = false;
     let jumpHeld = false;
     let dashHeld = false;
     let shootHeld = false;
@@ -51,6 +60,8 @@ export class InputManager implements InputSource {
       const snap = source.sample();
       if (snap.moveX < 0) left = true;
       if (snap.moveX > 0) right = true;
+      if (snap.moveY < 0) up = true;
+      if (snap.moveY > 0) down = true;
       jumpHeld = jumpHeld || snap.jumpHeld;
       dashHeld = dashHeld || snap.dashHeld;
       shootHeld = shootHeld || snap.shootHeld;
@@ -59,7 +70,8 @@ export class InputManager implements InputSource {
     }
 
     const moveX: -1 | 0 | 1 = left === right ? 0 : left ? -1 : 1;
+    const moveY: -1 | 0 | 1 = up === down ? 0 : up ? -1 : 1;
 
-    return { moveX, jumpHeld, dashHeld, shootHeld, weaponNextHeld, weaponPrevHeld };
+    return { moveX, moveY, jumpHeld, dashHeld, shootHeld, weaponNextHeld, weaponPrevHeld };
   }
 }

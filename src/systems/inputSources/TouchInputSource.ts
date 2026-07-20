@@ -116,6 +116,11 @@ export class TouchInputSource implements InputSource {
 
     return {
       moveX,
+      // Touch is deliberately horizontal-only (see FloatingStick.ts) - no
+      // vertical swim control on the touch UI yet, same as it has no jump
+      // charge indicator. Keyboard/gamepad are the tested "hold down to
+      // swim" surfaces for this P1 fix.
+      moveY: 0,
       jumpHeld: this.jump.isHeld,
       dashHeld: this.dash.isHeld,
       shootHeld: this.shoot.isHeld,

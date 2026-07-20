@@ -16,8 +16,14 @@ export class GamepadInputSource implements InputSource {
     const right = pad.right || stickX > STICK_DEADZONE;
     const moveX: -1 | 0 | 1 = left === right ? 0 : left ? -1 : 1;
 
+    const stickY = pad.leftStick.y;
+    const up = pad.up || stickY < -STICK_DEADZONE;
+    const down = pad.down || stickY > STICK_DEADZONE;
+    const moveY: -1 | 0 | 1 = up === down ? 0 : up ? -1 : 1;
+
     return {
       moveX,
+      moveY,
       jumpHeld: pad.A,
       shootHeld: pad.X || pad.B,
       dashHeld: pad.R1 > 0.5 || pad.L1 > 0.5,

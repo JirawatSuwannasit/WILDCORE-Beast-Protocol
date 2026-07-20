@@ -6,6 +6,10 @@ type Keys = Record<
   | 'left2'
   | 'right'
   | 'right2'
+  | 'up'
+  | 'up2'
+  | 'down'
+  | 'down2'
   | 'jump'
   | 'jump2'
   | 'shoot'
@@ -28,6 +32,10 @@ export class KeyboardInputSource implements InputSource {
           left2: Phaser.Input.Keyboard.KeyCodes.A,
           right: Phaser.Input.Keyboard.KeyCodes.RIGHT,
           right2: Phaser.Input.Keyboard.KeyCodes.D,
+          up: Phaser.Input.Keyboard.KeyCodes.UP,
+          up2: Phaser.Input.Keyboard.KeyCodes.W,
+          down: Phaser.Input.Keyboard.KeyCodes.DOWN,
+          down2: Phaser.Input.Keyboard.KeyCodes.S,
           jump: Phaser.Input.Keyboard.KeyCodes.Z,
           jump2: Phaser.Input.Keyboard.KeyCodes.SPACE,
           shoot: Phaser.Input.Keyboard.KeyCodes.X,
@@ -46,8 +54,13 @@ export class KeyboardInputSource implements InputSource {
     const right = this.keys.right.isDown || this.keys.right2.isDown;
     const moveX: -1 | 0 | 1 = left === right ? 0 : left ? -1 : 1;
 
+    const up = this.keys.up.isDown || this.keys.up2.isDown;
+    const down = this.keys.down.isDown || this.keys.down2.isDown;
+    const moveY: -1 | 0 | 1 = up === down ? 0 : up ? -1 : 1;
+
     return {
       moveX,
+      moveY,
       jumpHeld: this.keys.jump.isDown || this.keys.jump2.isDown,
       dashHeld: this.keys.dash.isDown || this.keys.dash2.isDown,
       shootHeld: this.keys.shoot.isDown,
