@@ -3,6 +3,87 @@
 Running log of deviations from `docs/GDD.md`, and judgment calls made where a requirement was
 ambiguous. One entry per decision, newest first.
 
+## M2 Speedway — anti-corridor floor fix, escalation-spikes re-placement, boss re-verification
+
+- **Methodology first: real (320px) screens, not the generator's internal segment tags.** Every §2.7
+  audit in this task (direction-change count, longest same-direction run) was computed independently
+  from raw tile data - `topSolidRowAt(col)` per column, bucketed into real 320px-wide screens, deltas
+  between consecutive screens' min-row - not trusted from the generator's own `validateRouteShape()`
+  console output. The generator's internal `SEQUENCE`/`segments[]` per-screen direction tags do not
+  correspond 1:1 to real camera-viewport screens (vertical-tagged primitives are narrower, 12
+  tiles/192px, than horizontal ones, 20 tiles/320px), so its self-reported `changes`/`maxRun` numbers
+  disagreed with the PO's audit while the independent raw-tile scan matched it (found `maxRun = 4` at
+  real screens 18-22, confirming the reported violation the generator's own count had missed).
+- **Anti-corridor floor fix: widen the setpiece's flat plateau break from one generator screen to
+  two.** At real-screen granularity, a single generator screen's flat stretch can land split across
+  two real screens depending on column alignment, which doesn't reliably register as a genuine break
+  in the descent's dominant-direction run - a second full flat generator screen guarantees at least
+  one whole real screen reads as flat regardless of alignment, splitting what was a continuous 5-screen
+  descent into runs no longer than 3. Total generator screen count went from 35 to 36 (within the GDD's
+  28-36 range, at the edge) - required mechanically renumbering every `segments[N]`/`tagEnemy`/
+  `tagHazard`/`tagGimmick` reference from 24-35 up to 25-36 via a single-pass regex, then fixing two
+  hardcoded stale-number references in the report output (`descentRangeEnd`, the multi-floor room's
+  "generator screens 26-27" line) that the regex couldn't catch since they weren't `segments[N]` calls.
+  **Result, independently verified via the same raw-tile real-screen scan**: 22 direction changes
+  (were disputed/ambiguous before, but the concrete violation - the run-of-4 - is gone), longest run
+  **2** consecutive same-direction real screens (down from 4), both comfortably clearing the GDD's
+  ≥4 changes / ≤3 run requirement. Vertical-transition screens: 54.8% of real screens change elevation
+  from the previous one, well above the horizontal-dominant ≥20% floor - stayed horizontal-dominant per
+  the GDD note ("short height spikes, not a tall climb"); no new tall climb was added, only flat runs
+  were broken up with the boost-descent's own existing elevation changes.
+- **Escalation spikes (`spikes-escalation`, x_tile 219) re-placement.** The reported death wasn't a
+  gap-width problem - the hazard was already at the proven-safe `SAFE_SPIKE_TILES` (32px) ceiling from
+  the prior spikes-width bugfix. The actual bug was proximity to `turretSunflower-escalation`: the
+  turret sat only 5 tiles before the spikes' near edge, close enough that its fire could plausibly land
+  right as the player commits to the jump - `takeDamage` overrides `velocityY`, cancelling the jump arc
+  mid-flight and dropping the player short, into the spikes, even though the spikes themselves were
+  never too wide. Moved the turret to the screen's own entry (was 6 tiles in, now 2) and the spikes much
+  later (was 12 tiles in, now 15), turning a ~5-tile turret-to-spikes gap into a ~12.5-tile one - a
+  long, clean, hazard-free runway immediately before the jump. Verified live (Playwright, close-in
+  56px-runway natural approach: run 400ms then hold jump to a full apex, matching the reproduction
+  pattern proven safe in the earlier spikes-width bugfix): cleared with `hp` unchanged (16/16), both
+  before and after the anti-corridor renumbering shifted this hazard's screen index.
+- **A second bug found (not separately reported) while re-verifying end to end: the multi-floor room's
+  entry wall had zero horizontal buffer against the previous screen's narrow exit ledge.** The room's
+  backstop wall (closes off the two columns no deck's floor reaches) started immediately at the room's
+  first column, right against `sheerDescent`'s narrow exit - a falling/jumping player who hadn't fully
+  landed by the time they crossed into the room clipped the wall's *face* (solid the full room depth)
+  instead of its top, and got stuck there permanently (`blockedRight: true` forever, confirmed via a
+  clean live Playwright repro: player frozen at a fixed x, sliding down the wall's face at a capped
+  velocity, never landing). Fix: widened the landing pad to 3 tiles before the backstop wall (was
+  effectively 0) and moved all three decks' floor-start columns to match the wall's new position, so
+  none of them re-expose the column range the wall exists to plug. Verified live: the same repro now
+  clears the gap, lands on the pad or slides briefly and recovers, and continues through the room with
+  no permanent stuck state, both via a full periodic-jump sweep and a full spawn-to-boss-door run
+  (~3600px of travel, repeated across multiple death/respawn cycles from unrelated hazards further
+  down - never once a permanent stuck state).
+- **Debugging note worth keeping: a Playwright test-harness bug, not a game bug, cost significant time
+  this session.** `page.evaluate(() => window.__debugGame.scene.start('Speedway'))` - an arrow function
+  with an *implicit return* - hangs Playwright indefinitely, because `scene.start()` returns Phaser's
+  `SceneManager` (a large circular object graph) which Playwright then tries to serialize back across
+  the CDP boundary to Node. Confirmed by reproducing the identical hang on the untouched Reservoir scene
+  too. Fix: always use an explicit block body with no return value for any `page.evaluate()` call that
+  invokes `scene.start()`. Separately: the generator script's output path defaults to `speedway.json`
+  in the current working directory (`process.argv[2] || 'speedway.json'`) when run without an explicit
+  path argument - running `node scripts/generate-speedway-map.mjs` from the repo root without a second
+  argument silently writes a stray file at the repo root instead of `src/data/stages/speedway.json`,
+  leaving the real map file stale while every mechanical validation still appears to pass (it's
+  validating the freshly-generated in-memory data, not the stale file Vite actually serves). This
+  produced a long, confusing false alarm mid-session where a live re-test appeared to show the
+  multi-floor fix hadn't worked at all, because it was exercising the old, unfixed file. Always pass
+  the output path explicitly: `node scripts/generate-speedway-map.mjs src/data/stages/speedway.json`.
+- **Boss (Volt Cheetah) re-verified after the terrain rebuild, per the separately-reported P1.** Live
+  Playwright walkthrough from `checkpoint-preboss` through the boss door: `bossSpawn`'s object-center Y
+  (1990) still matches `SpeedwayScene.ts`'s `BOSS_ROOM_FLOOR_Y` constant unchanged (only mid-map ground
+  tiles shifted this task, not the boss room itself). `bossState` was observed cycling through
+  `sweepTelegraph → sweepActive → idle → pounceTelegraph → pounceAir → pounceRecover → idle →
+  sweepActive` over a 16s window - the full pattern rotation genuinely running, confirming the PR #26
+  fix holds after this task's terrain and renumbering changes.
+- **Full verification suite passes**: typecheck, lint, format, all 124 unit tests, and production
+  build. The generator's own mechanical validation (route-shape, motif, placement, content-signature,
+  density, gimmick-usage, surface-variation, void-gap audit, spike-hazard audit, boss-room entry-
+  reachability) all pass on the regenerated map.
+
 ## Bugfix (P1) — Speedway boss (Volt Cheetah) inert: entry wall blocked the boss room
 
 - **The report and the real cause, found by reproducing rather than guessing.** Reported: Volt

@@ -124,10 +124,18 @@ const PLAN = [
   { dir: 'R', motif: 'gap' },
   { dir: 'U', motif: 'stairAscent' },
   { dir: 'R', motif: 'flat' },
-  // Beat 6: Setpiece (5) - high-speed downhill BOOST-STRIP DESCENT, staged
+  // Beat 6: Setpiece (6) - high-speed downhill BOOST-STRIP DESCENT, staged
   // wide landings (distinct rhythm from the tutorial/escalation stair).
+  // The flat plateau is now TWO screens wide (not one) - at real (320px)
+  // screen granularity a single generator screen's flat stretch can land
+  // split across two real screens depending on column alignment, which
+  // doesn't reliably register as a genuine break in the descent's
+  // dominant-direction run; two full screens guarantees at least one
+  // whole real screen reads as flat regardless of alignment, splitting
+  // the descent into two <=3-screen runs instead of one continuous 5.
   { dir: 'D', motif: 'boostDescent' },
   { dir: 'D', motif: 'boostDescent' },
+  { dir: 'R', motif: 'flat' },
   { dir: 'R', motif: 'flat' },
   { dir: 'D', motif: 'boostDescent' },
   { dir: 'D', motif: 'sheerDescent' },
@@ -162,7 +170,7 @@ const BEATS = [
   { name: 'escalation', count: 5 },
   { name: 'midboss', count: 1 },
   { name: 'remix', count: 6 },
-  { name: 'setpiece', count: 5 },
+  { name: 'setpiece', count: 6 },
   { name: 'breather', count: 3 },
   { name: 'finalExam', count: 5 },
   { name: 'preboss', count: 2 },
@@ -772,20 +780,29 @@ segments[12] = screenDStair(cursor.col + V_COLS, cursor.row);
 {
   const s = screenR(cursor.col + H_COLS, cursor.row);
   segments[13] = s;
-  addHazard(
-    'spikes',
-    'spikes-escalation',
-    tileCenterX(s.colStart + 12),
-    standingY(s.row, -2),
-    SAFE_SPIKE_TILES * TILE,
-    16,
-  );
+  // P1 fix (re-placement): the turret used to sit only 5 tiles before the
+  // spikes' near edge - close enough that its fire could plausibly land
+  // right as the player needs to commit to the jump, cancelling the arc
+  // (takeDamage overrides velocityY) and dropping them short, into the
+  // spikes, even though the spikes' own width is already the proven-safe
+  // SAFE_SPIKE_TILES. Moved the turret much earlier (right at the
+  // screen's own entry) and the spikes much later, so there's a long,
+  // clean, hazard-free runway immediately before the jump - readable
+  // safe footing to take off from, and a wide flat landing after.
   addEntity(
     'turretSunflower',
     'turretSunflower-escalation',
-    tileCenterX(s.colStart + 6),
+    tileCenterX(s.colStart + 2),
     standingY(s.row),
     16,
+    16,
+  );
+  addHazard(
+    'spikes',
+    'spikes-escalation',
+    tileCenterX(s.colStart + 15),
+    standingY(s.row, -2),
+    SAFE_SPIKE_TILES * TILE,
     16,
   );
   tagHazard(13, 'spikes');
@@ -989,35 +1006,54 @@ tagGimmick(22, 'speedStrip');
   tagHazard(23, 'spikes');
 }
 
-segments[24] = screenDBoost(cursor.col + V_COLS, cursor.row);
+{
+  // Second flat screen of the plateau (GDD §2.6 anti-corridor floor
+  // fix): guarantees a full real (320px) screen of genuinely flat
+  // ground splits the descent into two <=3-screen runs - a single
+  // generator screen here previously wasn't wide enough to reliably
+  // register as a break at real-screen granularity.
+  const s = screenR(cursor.col + H_COLS, cursor.row);
+  segments[24] = s;
+  addEntity(
+    'turretSunflower',
+    'turretSunflower-setpiece-plateau',
+    tileCenterX(s.colStart + 8),
+    standingY(s.row),
+    16,
+    16,
+  );
+  tagEnemy(24, 'turretSunflower');
+}
+
+segments[25] = screenDBoost(cursor.col + V_COLS, cursor.row);
 addHazard(
   'speedStrip',
   'speedStrip-setpiece-3',
   tileCenterX(
-    segments[24].tread1.colStart + (segments[24].tread1.colEnd - segments[24].tread1.colStart) / 2,
+    segments[25].tread1.colStart + (segments[25].tread1.colEnd - segments[25].tread1.colStart) / 2,
   ),
-  standingY(segments[24].tread1.row),
-  (segments[24].tread1.colEnd - segments[24].tread1.colStart) * TILE,
+  standingY(segments[25].tread1.row),
+  (segments[25].tread1.colEnd - segments[25].tread1.colStart) * TILE,
   16,
 );
 addEntity(
   'patrolDrone',
   'patrolDrone-descent',
-  tileCenterX(segments[24].tread2.colStart + 2),
-  rowTopY(segments[24].tread2.row) - 32,
+  tileCenterX(segments[25].tread2.colStart + 2),
+  rowTopY(segments[25].tread2.row) - 32,
   16,
   16,
 );
-tagGimmick(24, 'speedStrip');
-tagEnemy(24, 'patrolDrone');
+tagGimmick(25, 'speedStrip');
+tagEnemy(25, 'patrolDrone');
 
-segments[25] = screenDSheer(cursor.col + V_COLS, cursor.row);
-const descentRangeEnd = 25;
+segments[26] = screenDSheer(cursor.col + V_COLS, cursor.row);
+const descentRangeEnd = 26;
 addCheckpoint(
   'checkpoint-post-setpiece',
   2,
-  tileCenterX(segments[25].colEnd - 3),
-  standingY(segments[25].row),
+  tileCenterX(segments[26].colEnd - 3),
+  standingY(segments[26].row),
 );
 
 // =====================================================================
@@ -1037,16 +1073,28 @@ addCheckpoint(
   const midRow = topRow + 6;
   const botRow = topRow + V_COLS;
   // Entry/exit backstops start at their own floor's row, not above it -
-  // same bug class fixed repeatedly in Reservoir's rebuilds.
-  fillWall(colStart, colStart + 2, topRow, botRow + FILL_DEPTH);
+  // same bug class fixed repeatedly in Reservoir's rebuilds. The entry
+  // wall itself sits a few tiles IN from colStart (not immediately at
+  // it) behind a solid, full-depth landing pad: the previous screen
+  // (sheerDescent) only has a narrow 2-tile exit ledge, so a falling
+  // player landing even slightly long would clip the wall's face
+  // instead of its top - a generous buffer absorbs that regardless of
+  // exact landing spot.
+  const entryPadTiles = 3;
+  fillFloor(colStart, colStart + entryPadTiles, topRow, FILL_DEPTH);
+  fillWall(colStart + entryPadTiles, colStart + entryPadTiles + 2, topRow, botRow + FILL_DEPTH);
   fillWall(colEnd - 2, colEnd, botRow, botRow + FILL_DEPTH);
 
   // Top deck: two drop-through gaps to the mid deck.
-  const topGap1Start = colStart + 8;
+  const topGap1Start = colStart + entryPadTiles + 2 + 6;
   const topGap1End = topGap1Start + SAFE_GAP_TILES;
   const topGap2Start = colStart + 24;
   const topGap2End = topGap2Start + SAFE_GAP_TILES;
-  fillFloor(colStart + 2, topGap1Start, topRow, 0);
+  // All three decks' floors now start after the entry pad + backstop
+  // wall (not at the old colStart + 2), so none of them re-expose the
+  // column range the wall exists to plug.
+  const deckFloorStart = colStart + entryPadTiles + 2;
+  fillFloor(deckFloorStart, topGap1Start, topRow, 0);
   fillFloor(topGap1End, topGap2Start, topRow, 0);
   fillFloor(topGap2End, colEnd - 2, topRow, 0);
 
@@ -1056,12 +1104,12 @@ addCheckpoint(
   const midGap1End = midGap1Start + SAFE_GAP_TILES;
   const midGap2Start = colStart + 31;
   const midGap2End = midGap2Start + SAFE_GAP_TILES;
-  fillFloor(colStart + 2, midGap1Start, midRow, 0);
+  fillFloor(deckFloorStart, midGap1Start, midRow, 0);
   fillFloor(midGap1End, midGap2Start, midRow, 0);
   fillFloor(midGap2End, colEnd - 2, midRow, 0);
 
   // Bottom drainage crawl: fully continuous, the safe/slow floor.
-  fillFloor(colStart + 2, colEnd - 2, botRow);
+  fillFloor(deckFloorStart, colEnd - 2, botRow);
 
   addEntity(
     'turretSunflower',
@@ -1112,7 +1160,7 @@ addCheckpoint(
     16,
   );
 
-  segments[26] = {
+  segments[27] = {
     colStart,
     colEnd: colStart + H_COLS,
     row: midRow,
@@ -1122,7 +1170,7 @@ addCheckpoint(
     midRow,
     botRow,
   };
-  segments[27] = {
+  segments[28] = {
     colStart: colStart + H_COLS,
     colEnd,
     row: botRow,
@@ -1134,13 +1182,13 @@ addCheckpoint(
   };
   cursor.col = colEnd;
   cursor.row = botRow;
-  tagEnemy(26, 'turretSunflower');
-  tagEnemy(27, 'sparkBug');
+  tagEnemy(27, 'turretSunflower');
+  tagEnemy(28, 'sparkBug');
 }
 
 {
   const s = screenR(cursor.col + H_COLS, cursor.row);
-  segments[28] = s;
+  segments[29] = s;
   // Legs Capsule alcove: a short wall-kick chain up from the lower crawl,
   // no weapon gate (GDD §3.1 - "teaches players that secrets exist").
   // Pillars run all the way DOWN to the floor row itself (not stopping
@@ -1187,7 +1235,7 @@ addCheckpoint(
   // straight into the spikes before the player gets a chance to plant
   // and re-jump.
   const s = screenRGap(cursor.col + H_COLS, cursor.row, 2);
-  segments[29] = s;
+  segments[30] = s;
   const landingStripTiles = 4;
   const spikeExamALeftCol = s.gap.right + landingStripTiles;
   addHazard(
@@ -1206,23 +1254,23 @@ addCheckpoint(
     16,
     16,
   );
-  tagHazard(29, 'spikes');
-  tagEnemy(29, 'patrolDrone');
+  tagHazard(30, 'spikes');
+  tagEnemy(30, 'patrolDrone');
 }
-segments[30] = screenUShaft(cursor.col + V_COLS, cursor.row);
+segments[31] = screenUShaft(cursor.col + V_COLS, cursor.row);
 addEntity(
   'sparkBug',
   'sparkBug-exam-shaft',
-  tileCenterX(segments[30].colStart + 2),
-  standingY(segments[30].rowEnter),
+  tileCenterX(segments[31].colStart + 2),
+  standingY(segments[31].rowEnter),
   16,
   16,
 );
-tagEnemy(30, 'sparkBug');
+tagEnemy(31, 'sparkBug');
 
 {
   const s = screenR(cursor.col + H_COLS, cursor.row);
-  segments[31] = s;
+  segments[32] = s;
   addHazard('speedStrip', 'speedStrip-exam', tileCenterX(s.colStart + 6), standingY(s.row), 96, 16);
   addHazard(
     'collapsingBridge',
@@ -1240,33 +1288,33 @@ tagEnemy(30, 'sparkBug');
     16,
     16,
   );
-  tagGimmick(31, 'speedStrip');
-  tagGimmick(31, 'collapsingBridge');
-  tagEnemy(31, 'turretSunflower');
+  tagGimmick(32, 'speedStrip');
+  tagGimmick(32, 'collapsingBridge');
+  tagEnemy(32, 'turretSunflower');
 }
-segments[32] = screenDStair(cursor.col + V_COLS, cursor.row);
+segments[33] = screenDStair(cursor.col + V_COLS, cursor.row);
 addHazard(
   'electricFence',
   'electricFence-exam',
-  tileCenterX(segments[32].treads[1].col),
-  rowTopY(segments[32].treads[1].row) - 20,
+  tileCenterX(segments[33].treads[1].col),
+  rowTopY(segments[33].treads[1].row) - 20,
   16,
   40,
 );
 addEntity(
   'patrolDrone',
   'patrolDrone-exam-B',
-  tileCenterX(segments[32].treads[3].col),
-  rowTopY(segments[32].treads[3].row) - 24,
+  tileCenterX(segments[33].treads[3].col),
+  rowTopY(segments[33].treads[3].row) - 24,
   16,
   16,
 );
-tagHazard(32, 'electricFence');
-tagEnemy(32, 'patrolDrone');
+tagHazard(33, 'electricFence');
+tagEnemy(33, 'patrolDrone');
 
 {
   const s = screenR(cursor.col + H_COLS, cursor.row);
-  segments[33] = s;
+  segments[34] = s;
   addHazard(
     'spikes',
     'spikes-exam-B',
@@ -1276,32 +1324,32 @@ tagEnemy(32, 'patrolDrone');
     16,
   );
   addEntity('energyPickup', 'pickup-exam', tileCenterX(s.colStart + 17), standingY(s.row), 16, 16);
-  tagHazard(33, 'spikes');
+  tagHazard(34, 'spikes');
 }
 
 // =====================================================================
 // Beat 9: Pre-boss corridor (34-35) -> checkpoint -> boss room.
 // =====================================================================
-segments[34] = screenDStair(cursor.col + V_COLS, cursor.row);
+segments[35] = screenDStair(cursor.col + V_COLS, cursor.row);
 addEntity(
   'energyPickup',
   'pickup-preboss-1',
-  tileCenterX(segments[34].treads[1].col),
-  standingY(segments[34].treads[1].row),
+  tileCenterX(segments[35].treads[1].col),
+  standingY(segments[35].treads[1].row),
   16,
   16,
 );
 addEntity(
   'energyPickup',
   'pickup-preboss-2',
-  tileCenterX(segments[34].treads[3].col),
-  standingY(segments[34].treads[3].row),
+  tileCenterX(segments[35].treads[3].col),
+  standingY(segments[35].treads[3].row),
   16,
   16,
 );
 {
   const s = screenR(cursor.col + H_COLS, cursor.row);
-  segments[35] = s;
+  segments[36] = s;
   addCheckpoint('checkpoint-preboss', 3, tileCenterX(s.colStart + 2), standingY(s.row));
   addEntity('bossDoor', 'bossDoor', tileCenterX(s.colEnd - 2), rowTopY(s.row - 8), 16, 128);
 }
@@ -1730,7 +1778,7 @@ console.log(
   `Structural element 1/2 - CONTROLLED DESCENT (boost-strip): generator screens ${descentRangeStart}-${descentRangeEnd}`,
 );
 console.log(
-  `Structural element 2/2 - MULTI-FLOOR ROOM (highway underpass, 3 shallow decks, 2 real screens): generator screens 26-27`,
+  `Structural element 2/2 - MULTI-FLOOR ROOM (highway underpass, 3 shallow decks, 2 real screens): generator screens 27-28`,
 );
 console.log(
   'Ascent shaft: NOT used as a structural element (not required for a horizontal-dominant stage) - ' +
