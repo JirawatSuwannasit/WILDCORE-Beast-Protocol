@@ -1313,7 +1313,15 @@ const bossRoomColStart = cursor.col;
 const bossRoomColEnd = cursor.col + H_COLS + 6;
 const bossRoomRow = cursor.row;
 fillFloor(bossRoomColStart, bossRoomColEnd, bossRoomRow, FILL_DEPTH + 4);
-fillWall(bossRoomColStart, bossRoomColStart + 2, bossRoomRow - 40, bossRoomRow + FILL_DEPTH + 4);
+// P1 bugfix: the ENTRY wall must start at its own floor's row, not 40
+// rows above it - a full-height pillar right at the room's own entrance
+// column completely blocked the walk-in from the pre-boss corridor (the
+// same "backstop embeds the entry" bug class fixed repeatedly elsewhere
+// in this generator), so the player could never reach bossRoomTrigger,
+// beginRitual() never fired, and the boss sat idle forever - looking
+// "inert" with no attacks. The far (exit) wall keeps its full height;
+// nothing needs to walk past it.
+fillWall(bossRoomColStart, bossRoomColStart + 2, bossRoomRow, bossRoomRow + FILL_DEPTH + 4);
 fillWall(bossRoomColEnd - 2, bossRoomColEnd, bossRoomRow - 40, bossRoomRow + FILL_DEPTH + 4);
 addEntity(
   'bossRoomTrigger',
@@ -1645,6 +1653,37 @@ for (const hz of hazardObjects) {
 }
 if (spikeFailures > 0)
   throw new Error(`${spikeFailures} spike hazard(s) exceed ${SAFE_SPIKE_TILES} tiles`);
+
+// =====================================================================
+// Boss-room entry reachability regression check (P1 bugfix: a full-
+// height wall right at bossRoomColStart - the exact "backstop embeds
+// the entry" bug class fixed repeatedly elsewhere in this generator -
+// completely blocked the walk-in from the pre-boss corridor, so the
+// player could never reach bossRoomTrigger and the boss sat idle
+// forever, looking "inert"). Checks that the two entry columns are open
+// at head height (a few rows above the floor down to the floor itself),
+// not just that a floor tile exists - a solid pillar spanning those same
+// columns at head height would pass a naive "is there ground here" check
+// while still blocking the player completely.
+// =====================================================================
+{
+  const headroomRows = 3; // taller than the player's ~1.5-tile hurtbox, with margin
+  const entryCols = [bossRoomColStart, bossRoomColStart + 1];
+  const blockedRows = [];
+  for (const col of entryCols) {
+    for (let r = bossRoomRow - headroomRows; r < bossRoomRow; r += 1) {
+      if (grid[r + rowOffset]?.[col] !== EMPTY) blockedRows.push({ col, row: r });
+    }
+  }
+  console.log(
+    `\nBoss-room entry reachability check (cols ${entryCols.join(',')}, rows ${bossRoomRow - headroomRows}-${bossRoomRow - 1}): ${blockedRows.length === 0 ? 'OK - walk-in clear' : 'FAIL'}`,
+  );
+  if (blockedRows.length > 0) {
+    throw new Error(
+      `boss-room entry blocked at head height: ${JSON.stringify(blockedRows)} - the entry wall must start at bossRoomRow, not above it`,
+    );
+  }
+}
 
 // =====================================================================
 // Route map + full report
