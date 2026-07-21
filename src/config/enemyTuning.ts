@@ -113,3 +113,65 @@ export const waterGateTuning = {
   /** How long the water-level tween takes when a valve raises/lowers it (GDD §3.2). */
   toggleTweenMs: 700,
 } as const;
+
+// --- Ember Foundry (GDD §3.3 / §3b) ----------------------------------------
+
+export const slagBlobTuning = {
+  hp: 2,
+  crawlSpeed: 18,
+  gravity: 900,
+  patrolRangeX: 40,
+  /** GDD §3b: "periodically inflates (glow 24f) and lobs 2 slag arcs." */
+  inflateFrames: 24,
+  arcCount: 2,
+  arcSpeed: 90,
+  arcDamage: 2,
+  /** Frames of rest between attacks once cooled down from the last one. */
+  cooldownFrames: 100,
+  /** Forward offsets (px, along facing direction) where the landing flames spawn - approximates where the lobbed arcs come down without needing full projectile-impact tracking. */
+  flameOffsetsX: [24, 44] as readonly number[],
+} as const;
+
+export const slagFlameTuning = {
+  /** GDD §3b: "slag leaves brief floor flames" - a lingering contact hazard, not lethal. */
+  contactDamage: 1,
+  lifetimeFrames: 150,
+} as const;
+
+export const emberBatTuning = {
+  hp: 1,
+  /** GDD §3b: "eyes light 20f then U-curve swoop when the player passes below." */
+  eyeGlowFrames: 20,
+  swoopFrames: 50,
+  /** How far below the ceiling anchor the U-curve dips at its lowest point. */
+  swoopDepthPx: 44,
+  /** Horizontal proximity to the anchor that arms the eye-glow telegraph, once the player is below it. */
+  triggerRangeX: 60,
+  cooldownFrames: 80,
+} as const;
+
+export const heatVentTuning = {
+  /** Rising-ember particle count for the vent's visual telegraph (mirrors currentTuning.bubbleCount). */
+  emberCount: 6,
+} as const;
+
+export const pistonCrusherTuning = {
+  /** GDD §3b: "rails visible, 2-cycle rhythm, >=30f open window" - generous margin over the floor. */
+  openFrames: 50,
+  /** >=20f feel-pillar telegraph before the head slams down the rail. */
+  telegraphFrames: 24,
+  /** How long the crusher stays extended (lethal, blocking) before retracting. */
+  extendedFrames: 30,
+  /** Visual slide duration for the head moving between retracted/extended. */
+  travelMs: 140,
+} as const;
+
+export const risingLavaTuning = {
+  /**
+   * GDD (M4.2 prompt): "chase speed in config, NEVER faster than the
+   * dash-less run" - playerTuning.run.speed is 90px/s; kept well under
+   * that (see DECISIONS.md) so a player who keeps moving upward at a
+   * normal climbing pace always stays ahead with real margin.
+   */
+  riseSpeedPxPerSec: 50,
+} as const;

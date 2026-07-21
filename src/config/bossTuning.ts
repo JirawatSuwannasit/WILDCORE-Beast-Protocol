@@ -105,3 +105,72 @@ export const tideMantaTuning = {
     linkFrames: 10,
   },
 } as const;
+
+/**
+ * SLAG GOLEM mid-boss (GDD §3.3: "slag golem that re-forms once"). Two HP
+ * pools it manages itself (phase1Hp counted outside the base Enemy hp
+ * field entirely, so a first "defeat" never actually zeroes the real hp/
+ * isDead the scene reads - see SlagGolem.ts) - only the second pool maps
+ * onto the base Enemy's real hp, so onDeath/onDefeated fire exactly once,
+ * on the genuine final kill. No shutter door/ritual/weakness, same as
+ * Anglerfish - a real mid-boss fight, but simpler than a full boss.
+ */
+export const slagGolemTuning = {
+  phase1Hp: 5,
+  phase2Hp: 5,
+  contactDamage: 2,
+  /** Crumble -> re-form animation length (mirrors a boss fill-ritual's scale). */
+  reformFrames: 90,
+  lumberSpeed: 16,
+  patrolRangeX: 50,
+  /** >=20f telegraph before the ground-pound (glowing cracks spreading up the arms). */
+  slamTelegraphFrames: 26,
+  slamRecoverFrames: 40,
+  /** Radius (px) of the readable ground-pound AOE. */
+  slamRangeX: 30,
+  slamDamage: 2,
+  attackCooldownFrames: 90,
+} as const;
+
+/**
+ * MAGMA RHINO (GDD §3.3 / §4). 3 core patterns, all dodgeable with the
+ * buster alone; weak to Tide Burst ("extinguishes his charge flame" -
+ * interrupt + 4 damage, same fixed-damage weakness contract as every
+ * other boss).
+ */
+export const magmaRhinoTuning = {
+  maxHp: 16,
+  fillRitualMs: 1500,
+  desperationHpFraction: 0.25,
+  weaknessDamage: 4,
+  contactDamage: 3,
+
+  ramCharge: {
+    telegraphFrames: 28,
+    speed: 160,
+    /** GDD §3.3: "cracks the wall leaving a brief stun opening" - a genuine free-hit window, not just a recovery pause. */
+    wallStunFrames: 55,
+  },
+
+  lavaGeysers: {
+    /** >=20f telegraph (ground glow/crack) before each geyser in the sequence erupts. */
+    telegraphFrames: 26,
+    eruptFrames: 24,
+    /** Frames between one geyser's telegraph starting and the next one's, in the readable sequence. */
+    stepFrames: 30,
+    damage: 3,
+    recoverFrames: 20,
+  },
+
+  hornToss: {
+    telegraphFrames: 26,
+    rockCount: 3,
+    rockSpeed: 130,
+    damage: 2,
+    recoverFrames: 20,
+  },
+
+  desperation: {
+    linkFrames: 10,
+  },
+} as const;
