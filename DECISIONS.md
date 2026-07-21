@@ -3,6 +3,57 @@
 Running log of deviations from `docs/GDD.md`, and judgment calls made where a requirement was
 ambiguous. One entry per decision, newest first.
 
+## Bugfix (P1) — Speedway boss (Volt Cheetah) inert: entry wall blocked the boss room
+
+- **The report and the real cause, found by reproducing rather than guessing.** Reported: Volt
+  Cheetah stands still in the boss room, no attacks, no movement, no pattern - looked like a
+  regression from the terrain rebuild in the boss spawn/trigger, arena bounds, or the pattern FSM
+  not starting. Live-tested the actual repro (teleport to the pre-boss corridor, hold right, walk
+  toward the boss room) and found the REAL cause: **the player never reaches the boss room at all.**
+  They walk right up to a wall at the room's own entrance and get permanently stuck there
+  (`blockedRight: true` forever) - the boss looking "inert" is a symptom, not the bug; the player
+  simply never gets close enough to see it do anything, because they can't get in.
+- **Root cause: the exact "backstop embeds the entry" bug class, in the one place never audited.**
+  `generate-speedway-map.mjs`'s boss-room construction (`fillWall(bossRoomColStart, bossRoomColStart
+  + 2, bossRoomRow - 40, ...)`) builds the entry wall spanning from 40 rows ABOVE the floor down
+  through it - a full-height pillar, not a low backstop, sitting directly at the room's own entrance
+  column, immediately after the pre-boss corridor's floor ends. This is the identical bug pattern
+  fixed repeatedly elsewhere in this generator (`screenUStair`'s entry wall, the multi-floor room's
+  entry wall, the Legs Capsule alcove's pillars - "a wall starting above the row the player is
+  already standing on blocks the flat walk-in entirely, since Arcade collision doesn't distinguish
+  FILL from TOP tiles"), copied verbatim from Reservoir's identical "Boss room (appended after the
+  counted path, same convention as Reservoir)" block and never itself audited in any of the prior
+  Speedway rebuilds - every earlier live-test sweep this session got stuck or died well before
+  reaching the boss room, so the entrance itself was never actually exercised end-to-end until now.
+  **The boss's own FSM was never the problem** - confirmed by reading `VoltCheetah.ts`: it defaults
+  to `bossFsmState = 'ritual'` with `framesRemaining = 0`, meaning it actually auto-exits the ritual
+  and starts idling/picking patterns on its own within one frame of the scene loading (a latent
+  quirk, harmless in practice since `beginRitual()` unconditionally re-arms `bossFsmState = 'ritual'`
+  with a fresh timer the moment the door closes, overwriting whatever state it drifted into while the
+  player was elsewhere in the level - verified live: the boss was already mid-`dash` by the time the
+  player reached the door, and correctly reset to `ritual` the instant the trigger fired).
+- **Fix: the entry wall now starts at its own floor's row, not 40 rows above it** - one line,
+  matching every other instance of this exact fix elsewhere in the file. The far (exit) wall keeps
+  its full height; nothing needs to walk past it, so it was left alone.
+- **Regression check added to the generator, not just fixed by hand.** A new mechanical check verifies
+  the boss room's two entry columns are open at head height (3 rows above the floor down to the floor
+  itself), not just that a floor tile exists there - a pillar spanning those columns would pass a
+  naive "is there ground" check while still blocking the player completely. Confirmed it actually
+  catches the bug by reverting the fix in a scratch copy of the generator and re-running: the check
+  fails with the exact blocked columns/rows. This is the most direct regression protection available
+  for a bug that's fundamentally about *map geometry*, not application logic - a unit test on
+  `VoltCheetah`'s FSM in isolation would not have caught this, since the FSM itself was never broken.
+- **Verification, end to end.** Live Playwright walkthrough from the pre-boss checkpoint through the
+  (now-open) entrance: `bossRoomEntered` and `cameraLocked` flip true, `bossDoor.isClosed` flips true,
+  the boss transitions `dash → ritual` (re-armed, ~1.5s per `fillRitualMs`) `→ idle → crouch → dash`,
+  then continues cycling `dash/recover/idle → pounceTelegraph/pounceAir/pounceRecover → idle → crouch
+  → dash`, with real horizontal movement (`bossX` ranging over hundreds of px, bouncing off the arena
+  walls) - the full pattern rotation genuinely running, not just a state label changing. Full
+  verification suite (typecheck/lint/format/test/build) passes; the generator's own mechanical
+  validation (route-shape, motif, placement, content-signature, density, gimmick-usage, surface-
+  variation, gap/hazard-width, and the new entry-reachability check) all pass. Only the hazard/ground
+  layer changed - `SpeedwayScene.ts` needed no edits.
+
 ## Bugfix (P1) — Speedway spikes exceeding a fair base-kit jump (GDD §2.5 pillar 1)
 
 - **The report and the measurement.** Reported hazard: a lethal spike patch near world pos
