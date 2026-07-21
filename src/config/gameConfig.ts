@@ -6,6 +6,7 @@ import { StageSelectScene } from '@/scenes/StageSelectScene';
 import { GymScene } from '@/scenes/GymScene';
 import { SpeedwayScene } from '@/scenes/SpeedwayScene';
 import { ReservoirScene } from '@/scenes/ReservoirScene';
+import { FoundryScene } from '@/scenes/FoundryScene';
 import { THEME } from '@/config/theme';
 
 function buildScaleConfig(): Phaser.Types.Core.ScaleConfig {
@@ -45,6 +46,14 @@ export function buildGameConfig(): Phaser.Types.Core.GameConfig {
       activePointers: 4,
       gamepad: true,
     },
-    scene: [BootScene, TitleScene, StageSelectScene, GymScene, SpeedwayScene, ReservoirScene],
+    scene: [
+      BootScene,
+      TitleScene,
+      StageSelectScene,
+      GymScene,
+      SpeedwayScene,
+      ReservoirScene,
+      FoundryScene,
+    ],
   };
 }

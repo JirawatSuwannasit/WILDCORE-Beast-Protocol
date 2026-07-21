@@ -98,8 +98,14 @@ export abstract class BaseStageScene extends BaseScene {
   private cameraLocked = false;
   private spawnPoint = { x: 16, y: 16 };
 
-  private verticalCameraZone: Phaser.GameObjects.Zone | null = null;
-  private inVerticalCameraZone = false;
+  // GDD §2.6: "vertical camera zones for shafts ... lock per arena" -
+  // plural, since a stage may have more than one distinct shaft (e.g.
+  // Foundry's chimney tutorial ascent AND its separate lava-chase
+  // setpiece). A list rather than a single field so every registered
+  // shaft gets its own lock; Speedway/Reservoir each only ever register
+  // one, so this is a behavior-preserving generalization for them.
+  private readonly verticalCameraZones: Phaser.GameObjects.Zone[] = [];
+  private activeVerticalCameraZone: Phaser.GameObjects.Zone | null = null;
 
   create(): void {
     this.cameras.main.setBackgroundColor(THEME.background);
@@ -408,17 +414,20 @@ export abstract class BaseStageScene extends BaseScene {
    * a subclass's entityRegistry spawner.
    */
   protected registerVerticalCameraZone(zone: Phaser.GameObjects.Zone): void {
-    this.verticalCameraZone = zone;
+    this.verticalCameraZones.push(zone);
   }
 
   private updateVerticalCameraZone(): void {
-    if (!this.verticalCameraZone || this.cameraLocked) return;
-    const overlapping = this.physics.overlap(this.player.hurtboxZone, this.verticalCameraZone);
+    if (this.verticalCameraZones.length === 0 || this.cameraLocked) return;
     const camera = this.cameras.main;
+    const overlappingZone =
+      this.verticalCameraZones.find((zone) =>
+        this.physics.overlap(this.player.hurtboxZone, zone),
+      ) ?? null;
 
-    if (overlapping && !this.inVerticalCameraZone) {
-      this.inVerticalCameraZone = true;
-      const zoneBody = this.verticalCameraZone.body as Phaser.Physics.Arcade.StaticBody;
+    if (overlappingZone && overlappingZone !== this.activeVerticalCameraZone) {
+      this.activeVerticalCameraZone = overlappingZone;
+      const zoneBody = overlappingZone.body as Phaser.Physics.Arcade.StaticBody;
       const targetScrollX = zoneBody.center.x - camera.width / 2;
       // A zero X-lerp is what actually does the locking (startFollow's own
       // per-frame scrollX += (target-scrollX)*lerpX holds scrollX exactly
@@ -432,8 +441,8 @@ export abstract class BaseStageScene extends BaseScene {
         duration: VERTICAL_ZONE_ENTRY_PAN_MS,
         ease: 'Sine.easeOut',
       });
-    } else if (!overlapping && this.inVerticalCameraZone) {
-      this.inVerticalCameraZone = false;
+    } else if (!overlappingZone && this.activeVerticalCameraZone) {
+      this.activeVerticalCameraZone = null;
       camera.setLerp(NORMAL_CAMERA_LERP, NORMAL_CAMERA_LERP);
     }
   }

@@ -20,9 +20,10 @@ export class StageSelectScene extends BaseScene {
       })
       .setOrigin(0.5);
 
-    this.addStageButton(centerX, centerY - 45, 'SPEEDWAY SAVANNA', THEME.accentTeal, 'Speedway');
-    this.addStageButton(centerX, centerY - 5, 'CORAL RESERVOIR', THEME.accentCoral, 'Reservoir');
-    this.addStageButton(centerX, centerY + 45, 'PLAYER GYM (practice)', THEME.panel, 'Gym');
+    this.addStageButton(centerX, centerY - 65, 'SPEEDWAY SAVANNA', THEME.accentTeal, 'Speedway');
+    this.addStageButton(centerX, centerY - 25, 'CORAL RESERVOIR', THEME.accentCoral, 'Reservoir');
+    this.addStageButton(centerX, centerY + 15, 'EMBER FOUNDRY', THEME.accentAmber, 'Foundry');
+    this.addStageButton(centerX, centerY + 65, 'PLAYER GYM (practice)', THEME.panel, 'Gym');
   }
 
   private addStageButton(

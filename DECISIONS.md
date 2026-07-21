@@ -3,6 +3,208 @@
 Running log of deviations from `docs/GDD.md`, and judgment calls made where a requirement was
 ambiguous. One entry per decision, newest first.
 
+## M4.2 — Ember Foundry (GDD §3.3 / §2.6 / §3b): the third full stage
+
+- **Critical finding, applies beyond this stage: Phaser Arcade tilemap collision culls a tile's
+  face when solid material is directly adjacent on that face's side, even though the raw tile
+  data reads solid and `TilemapLayer.getTileAtWorldXY(...).collides` reports `true`.** Discovered
+  live (Playwright, real game-loop ticks - not manual `scene.update()` calls, which don't drive
+  Arcade's own physics-world step and gave false negatives earlier in this same investigation)
+  when the post-setpiece checkpoint and every wall-kick shaft's landing in this stage turned out
+  to be a phantom floor: the player fell straight through at terminal velocity, from a checkpoint
+  ID confirmed correctly grounded by the generator's own `checkGroundAnchor` mechanical check. A
+  column-by-column live sweep (`blocked.down` after a controlled 5-25px drop, never spawning the
+  test body already embedded in the tile - an embedded start gives Arcade nothing to separate
+  against and is a false negative in the opposite direction) isolated it to an exact, reproducible
+  pattern: any floor tile with a *wall* tile immediately above its own row is unstandable, while
+  tiles with genuinely empty space above are fine. Root cause: `screenUShaft`'s and (this stage's
+  new) `lavaChaseLeg`'s wall height had a stylistic margin - `wallTop = rowEnd - 4` (a few rows of
+  "cap" above the climb) and `wallBottom = rowStart + FILL_DEPTH` (matching the floor's own
+  underfill depth) - both of which put solid wall material directly above the very floor rows the
+  player is meant to land on and stand on, at both the entry (rowStart) and exit (rowEnd) of every
+  leg, and (worse) at every leg-to-leg boundary, since one leg's wall margin bleeds into the next
+  leg's entry row. Fixed by making the wall span *exactly* the climbable gap and nothing more -
+  `wallTop = rowEnd` (no margin above the exit) and `wallBottom = rowStart - 2` (a genuine empty
+  row above the entry, not just the row immediately adjacent to it - an interim `rowStart - 1`
+  attempt still failed live, confirming the culled tile is the one *directly touching* the wall,
+  not merely "at the same row as" it). Re-verified with a full live column sweep across the lava
+  chase (entry row, every leg's landing, the final wide landing) and the tutorial/escalation/
+  final-exam wall-kick shafts (`heatVent-tutorial`, `-escalation`, `-exam`) after the fix: every
+  real landing position now catches the player; only positions that were never meant to have floor
+  in the first place (the zigzag shaft's off-side at a given row) still read empty, correctly.
+  **Not fixed elsewhere:** `generate-reservoir-map.mjs`'s `screenUShaft` and
+  `generate-speedway-map.mjs`'s wall-kick primitives use the same `rowEnd - 4` / `rowStart +
+  FILL_DEPTH` margin and are very likely carrying the same latent "unstandable landing" bug on
+  their own wall-kick shafts - out of scope for this stage's PR (different files, already-shipped
+  maps), but worth a dedicated pass; flagging here rather than silently leaving it for a future
+  session to rediscover from scratch.
+- **A second, smaller bug in the same family, also caught live rather than by the generator's own
+  checks:** a piston crusher placed at the landing between lava-chase legs 3 and 4 punched its
+  doorway cut through what was actually a *landing floor*, not a divider wall between two
+  same-row floor segments (the pattern `addCrusherDoorway` was designed for, and where it's used
+  correctly everywhere else: screens 10/33, the multi-floor room, the branch). The cut removed the
+  floor's own surface tile with nothing but thin underfill below, so standing there dropped the
+  player through to whatever solid ground existed several tiles down. Root cause was compounded by
+  build *order*: the crusher was originally added before the next leg's own wall-fill, which then
+  silently re-solidified (paved over) the doorway's cleared cells - fixed the ordering first (added
+  a general **crusher-doorway integrity check** to the generator, verifying every doorway's cleared
+  cells are still empty in the final grid, so this exact "re-solidified by something built later"
+  class can never regress silently again), then, once the "buried face" finding above explained why
+  even a properly-open doorway still wasn't landable in this specific spot, removed this one crusher
+  outright rather than trying to make a landing-floor doorway work. Piston crushers already have 6
+  other placements across 3 different beats (escalation, remix, finalExam), so beat 6's own
+  identity (heat vent + rising lava + Ember Bat) isn't thinned by dropping this one.
+- **Declared axis: VERTICAL-DOMINANT, a CLIMB - deliberately shaped to read differently from
+  Reservoir's vertical DESCENT**, per the M4.2 prompt's explicit "no two stages the same shape"
+  instruction. Concretely: net elevation trends upward across the whole stage (start deep in the
+  volcano's base at generator row 260, peak at row 164 after the lava chase, i.e. +96 rows / 1536px
+  of net climb before the final-exam/preboss beats settle back down slightly for boss-room pacing);
+  the primary vertical tool is heat vents (a strong, continuous upward push filling every wall-kick
+  gap), not wall-kick chains alone, though wall-kicking remains a fully viable alternate route
+  through every vent shaft (`screenUShaft`, no vent, textures screen 6 specifically to teach it);
+  and the setpiece is a forced, continuously-rising, lethal hazard chasing the player upward, the
+  structural opposite of Reservoir's setpiece (an assist-only rising current inside its own descent).
+- **Lava chase speed: 50px/s, chosen with real margin under the GDD's literal "never faster than
+  the dash-less run" (90px/s) ceiling, not just barely under it.** The two speeds aren't measuring
+  the same kind of motion (horizontal run vs. vertical climb-while-dodging), so "50 vs 90" isn't a
+  precise safety margin by itself - reasoned instead from wall-clock pacing: the chase's full
+  vertical extent is 5 legs x 192px = 960px; at 50px/s the surface takes ~19s to close that whole
+  gap from trigger to ceiling, comfortably longer than the chase should take a player who keeps
+  moving (climbing via vent + occasional wall-kick, dodging one Ember Bat and glancing at one
+  mid-chase piston crusher along the way) at a normal, unhurried pace - while still being fast
+  enough to feel like real pressure if the player stalls. Reservoir's own rising-water assist runs
+  at 18px/s for comparison, but that's a 0-damage helper the player is never punished for lagging
+  behind, not a lethal chase; 50px/s was picked as a distinct, faster-but-still-clearly-under-cap
+  value for the lethal case.
+- **`lavaChaseLeg` deliberately does NOT reuse the zigzag `screenUShaft` shape.** Reservoir's/this
+  stage's other wall-kick legs alternate which side of the gap has the landing floor screen to
+  screen (so the shaft as a whole visually staggers left-right while climbing). The lava chase
+  instead keeps the same X column range for all 5 legs - a straight vertical shaft - specifically
+  so `RisingLavaZone`'s overlap check (`Math.abs(px - this.x) <= halfWidth`, a single fixed X-band)
+  can cover the entire chase with one hazard instance instead of needing to track a zigzagging
+  hazard region leg by leg. A cosmetic/geometric simplification made for a concrete gameplay-logic
+  reason, not laziness - noted since every other shaft in the codebase zigzags and this one
+  deliberately doesn't.
+- **Slag Golem's "re-forms once" (GDD §3.3) implemented as two independent HP pools, not a single
+  HP value with a special-cased zero-crossing.** `phase1Hp` is a private counter the class manages
+  entirely itself, intercepting every hit via an overridden `takeDamage` and never calling
+  `super.takeDamage` until phase 1 is spent - meaning the base `Enemy`'s own `hp`/`isDead` stay at
+  full/false throughout the whole first phase, so `onDeath`/`onDefeated` (and everything the owning
+  scene wires to them - the mid-boss dark-overlay clear, in this case) can only ever fire once, on
+  the genuine second kill. Considered and rejected: letting `hp` actually hit 0 once and intercepting
+  `onDeath` to "revive" - this would require adding a new protected `Enemy` primitive (something
+  like `reviveWithHp`) purely for one boss's one-off mechanic, more surface area for a smaller win
+  than the two-pool approach, which needed zero base-class changes.
+- **Magma Rhino's "brief stun opening" (ram charge pattern) implemented as a genuinely longer,
+  undefended recovery window (`wallStunFrames: 55`), not extra damage or a different hit reaction.**
+  GDD §4's own rule ("weakness makes it easier, never mandatory") already guarantees every pattern
+  is buster-beatable without a special "opening" mechanic; the "opening" here is purely about
+  *tempo* - a a longer pause than a normal recovery (VoltCheetah's dash recover is 20f; this is
+  55f) so a player who's been dodging the charge gets a real, generous multi-hit punish window,
+  matching the GDD prose's framing of it as a standout moment in the fight, not just "the same as
+  every other boss's post-attack lag."
+- **Vertical camera zone generalized from a single field to a list in `BaseStageScene`** (was:
+  `verticalCameraZone: Zone | null`; now: `verticalCameraZones: Zone[]`), because this stage has a
+  legitimate second use case Reservoir/Speedway didn't: the lava chase is a distinct, separately-
+  locked shaft from the earlier tutorial/escalation vent legs, and GDD §2.6 literally says "vertical
+  camera zones for shafts... lock per arena" (plural). In the end only the lava chase actually
+  registers one (see below) - but the generalization is real, behavior-preserving for the two
+  existing single-zone stages (confirmed: full regression suite - typecheck/lint/format/124 tests/
+  build - passes unchanged), and now available if a future stage needs two real locked shafts at
+  once.
+- **The tutorial/escalation heat-vent legs (screens 5-6, 2 screens tall) do NOT get their own
+  vertical-camera lock, even though the generalization above would now support it.** They're short
+  (192px, well inside a single 180px-tall viewport already) and diagonally offset from each other
+  (screenUShaft's zigzag), so a single lock zone centered on their combined bounds wouldn't cleanly
+  center either leg - the same reasoning Speedway's own M2 audit already used to skip a lock on its
+  one short texture-only wall-kick leg ("no vertical-camera zone (texture only, not a structural
+  shaft)"). Only the 5-leg, single-column lava chase - long, straight, and the stage's actual
+  climbing setpiece - gets the lock.
+- **Secrets are both skill/timing-gated, not weapon-gated - no "locked" hint sign built for
+  either, unlike Reservoir's Body Capsule (Volt Chain) or Speedway's precedent-setting "no gate"
+  Legs Capsule.** GDD §3.3 asks for a Heart Chip "behind a crusher on a timed 2-cycle route" and a
+  Cell Pack "above the lava chase (dash recommended, but ... clearable with the base kit)" - neither
+  names a weapon gate, and the M4.2 prompt's "gate checks show a readable hint where relevant"
+  qualifier ("where relevant") is read here as *not* relevant for a pure timing/platforming gate,
+  since the piston crusher's own visible rail and rhythm (and the vent's visible push) already are
+  the readable hint, the same precedent Speedway's Legs Capsule established for "skill only" secrets.
+  Heart Chip sits behind two piston crushers on the branch's upper catwalk; Cell Pack sits on a
+  heat-vent-lifted alcove directly off the breather beat, reachable with base-kit jumps (dash is
+  still globally locked at this milestone regardless).
+- **Observed but not fixed: `generate-reservoir-map.mjs`'s `screenUShaft` gap-width arithmetic
+  looks miscomputed.** Its comment claims "3-tile gap" but the actual formula
+  (`rightWallStart = midCol + Math.ceil(gapWidth / 2)`, mirrored on the left as `midCol -
+  Math.ceil(gapWidth / 2)`) produces a 4-tile (64px) gap for `gapWidth = 3`, not 3 - this is the
+  exact bug class Speedway's own bugfix log already found and fixed *in Speedway's independent copy*
+  (`rightWallStart = leftWallEnd + gapWidth`), but the fix was apparently never ported back to
+  Reservoir's generator. This stage's own `screenUShaft`/`lavaChaseLeg` use the corrected exact-width
+  formula throughout (verified: every void gap reported by the generator's fairness audit is exactly
+  3 tiles/48px, never 4). Not touched here - different stage, already-shipped map, out of scope for
+  this PR - but flagged for a future audit pass, since a 64px gap is meaningfully closer to the
+  ~68.5px max wall-kick reach than the 48px value every other bugfix in this codebase's history has
+  treated as the proven-safe ceiling.
+- **§2.7 report**, computed mechanically by the generator on every run (route-shape, motif-
+  repetition, placement/ground-anchor, content-signature, density, gimmick-usage, real-320px-screen
+  surface-variation, void-gap fairness, crusher-doorway integrity, and boss-room entry reachability
+  all gate the build - the script throws before writing the file if any fail):
+  - Declared axis: **VERTICAL-DOMINANT** (a climb). Vertical path: **51.4%** (18/35 screens U/D-
+    tagged) - above both the 35% vertical-dominant floor and comfortably distinct from a flat
+    stage; reads as a different shape from Reservoir's 51.4%-vertical *descent* (same percentage,
+    opposite net direction and different signature mechanic - vent-lift ascent vs. water-level
+    descent). Longest same-direction run: **3** (at the cap, never exceeding it). Direction
+    changes: **23**.
+  - Structural elements (all three used, matching Reservoir's precedent of implementing every
+    element the stage's own §3 route-shape spec names, not just the required two):
+    - **ASCENT SHAFT** (heat-vent chimney, wall-kick-capable, vertical camera not locked - see
+      above): screens **5-6**.
+    - **RISING LAVA CHASE / forced ascent setpiece** (vertical-camera locked): screens **20-25**.
+    - **MULTI-FLOOR ROOM** (forge hall, ascending through 3 tiers via heat-vent gaps, piston-
+      crusher-guarded corridors on 2 of the 3 tiers): screens **14-15** (a genuine 40-tile/2-real-
+      screen span, not a single-screen room).
+    - **DESCENT** (lava-fall, heat-vent slowfall softening the final open drop): screens **29-30**.
+  - **BRANCH & REJOIN** (mandatory every stage): upper catwalk (2 piston crushers + Ember Bat +
+    pickups + the Heart Chip secret, fast/risky) vs. lower pipe corridor (Slag Blob only,
+    slow/safe): fork/rejoin span **screens 17-18**, a genuine 40-tile/2-real-screen span with 9
+    rows (144px) of vertical separation between the bands (the proven-safe margin from Reservoir's
+    own branch rebuild).
+  - Motif variety: **12** distinct ground shapes used (`flat`, `dip`, `ventShaft`, `shaft`,
+    `crusherDoorway`, `arena`, `multiFloor`, `branch`, `sheer`, `lavaChase`, `lavaChaseLedge`,
+    `lavafallDescent`), longest same-motif run **3** (at the cap).
+  - Content variety: **0** consecutive-identical-signature violations; density **1.84**
+    screens/encounter (19 regular-enemy - Slag Blob/Ember Bat - placements / 35 screens, inside
+    the 1.5-2.0 target band). Encounters per beat: intro 1, tutorial 1, escalation 4, midboss 0,
+    remix 5, setpiece 2, breather 2, finalExam 4, preboss 0.
+  - Gimmick through-line (heat vent, the tracked signature gimmick - piston crusher and rising
+    lava are also present throughout but tracked separately as hazards, not gimmick-usage):
+    screens **[5, 9, 14, 15, 20, 21, 24, 29, 30, 32]**, touching beats **[2, 3, 5, 6, 8]** -
+    including setpiece (6) and finalExam (8), the two beats the check requires.
+  - finalExam (beat 8, screens 29-33) vs. escalation (beat 3, screens 8-12): escalation teaches
+    heat vent, piston crusher, Slag Blob, and Ember Bat **in isolation**, one new element per
+    screen; finalExam combines a full heat-vent-slowfall descent, a Slag Blob + Ember Bat pair
+    together in one room, another vent climb, AND a piston crusher + Ember Bat together, back to
+    back with no breather between them - the hardest **combination** of everything taught, not a
+    repeat of any single escalation screen.
+  - Fairness: every void gap (wall-kick and otherwise) is exactly **3 tiles (48px)**, the base-
+    kit-jump-reach-bugfix-proven-safe ceiling, computed as `left + gapWidth` throughout (never the
+    `mid +/- ceil(gapWidth/2)` formula that silently doubles to 4 tiles - see the Reservoir finding
+    above). Base-kit clearable throughout; dash is not required anywhere (and is still globally
+    locked at this milestone regardless).
+  - Per-screen surface row and the full ASCII route map are in the PR description, generated
+    directly from this same run (not hand-transcribed).
+  - Map: 586x285 tiles (9,376x4,560px).
+- **Blind-clear / deathless-run time: a design-time estimate** (no way to have a human blind-run it
+  in this sandbox), following the same math approach as Speedway's/Reservoir's own M2/M4.1 entries:
+  9,376px of horizontal extent alone understates a vertical-dominant stage's real traversal length
+  (960px of the lava chase's climb, plus the tutorial/escalation/final-exam shafts and the multi-
+  floor room's own vertical spans, aren't "horizontal progress" at all) - ballpark total path length
+  is closer to 11,000px accounting for the vertical content, at a dead-sprint-equivalent pace (~90-
+  110s of pure movement). Layering in the Slag Golem mid-boss, ~19 regular encounters (not all need
+  fighting), the rising-lava chase's own forced pacing, and the Magma Rhino fight (3 patterns +
+  desperation) puts a practiced deathless run at roughly **3-4 minutes** and a blind first clear at
+  roughly **5-7 minutes** - tracking the GDD §2.6 target (2.5-3.5 / 4-6) closely enough to trust
+  without further tuning, on the high side given the vertical-dominant climb is inherently slower
+  than a horizontal sprint; a real device playtest should confirm rather than the other direction.
+
 ## M2 Speedway — anti-corridor floor fix, escalation-spikes re-placement, boss re-verification
 
 - **Methodology first: real (320px) screens, not the generator's internal segment tags.** Every §2.7
