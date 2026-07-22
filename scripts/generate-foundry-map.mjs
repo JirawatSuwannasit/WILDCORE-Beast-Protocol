@@ -23,6 +23,7 @@
 // gimmick-usage/placement/fairness are all re-verified mechanically below,
 // not just asserted.
 
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 
 const TILE = 16;
@@ -922,9 +923,9 @@ let lavaChaseShaftZoneObj;
     'risingLavaZone',
     'risingLava-chase',
     tileCenterX((shaftColStart + ledgeColEnd) / 2),
-    0,
+    ((chaseTopRow + chaseBottomRow) / 2) * TILE,
     (ledgeColEnd - shaftColStart) * TILE,
-    0,
+    (chaseBottomRow - chaseTopRow) * TILE,
     [
       { name: 'bottomRow', type: 'int', value: chaseBottomRow },
       { name: 'ceilingRow', type: 'int', value: chaseTopRow },
@@ -1069,6 +1070,21 @@ addEntity(
   14,
   10,
 );
+addEntity(
+  'controlledDescentZone',
+  'controlledDescent-lavafall',
+  tileCenterX((segments[29].colStart + segments[30].colEnd) / 2),
+  ((segments[29].rowEnter + segments[30].rowExit) / 2) * TILE,
+  (segments[30].colEnd - segments[29].colStart) * TILE,
+  (segments[30].rowExit - segments[29].rowEnter) * TILE,
+  [
+    { name: 'steerable', type: 'bool', value: true },
+    { name: 'visibleLandingHalfScreenBeforeCommitment', type: 'bool', value: true },
+    { name: 'noBlindLandingOntoHazard', type: 'bool', value: true },
+    { name: 'slowfallPushY', type: 'int', value: -90 },
+    { name: 'maxFallSpeedY', type: 'int', value: 130 },
+  ],
+);
 tagGimmick(30, 'heatVent');
 tagEnemy(30, 'emberBat');
 
@@ -1160,7 +1176,7 @@ addEntity(
 addSection('bossRoom', bossRoomColStart, bossRoomColEnd, bossRoomRow - 40, bossRoomRow + 4);
 cursor.col = bossRoomColEnd;
 
-// --- Section markers per beat ------------------------------------------
+// --- Switchback macro relayout -----------------------------------------
 const beatToScreens = [];
 {
   let idx = 1;
@@ -1171,16 +1187,119 @@ const beatToScreens = [];
     idx = end + 1;
   }
 }
+
+function segmentColRange(start, end) {
+  const cols = [];
+  for (let n = start; n <= end; n += 1) cols.push(segments[n].colStart, segments[n].colEnd);
+  return { oldStart: Math.min(...cols), oldEnd: Math.max(...cols) };
+}
+const macroBands = beatToScreens.map((beat, i) => ({
+  name: beat.name,
+  ...segmentColRange(beat.start, beat.end),
+  newStart: [0, 60, 54, 251, 146, 191, 272, 256, 302][i],
+  flip: [false, false, false, true, true, false, false, false, false][i],
+}));
+macroBands.push({
+  name: 'bossRoom',
+  oldStart: bossRoomColStart,
+  oldEnd: bossRoomColEnd,
+  newStart: 342,
+  flip: false,
+});
+
+function transformCol(col) {
+  const band = macroBands.find((b) => col >= b.oldStart && col < b.oldEnd);
+  if (!band) return col;
+  return band.flip
+    ? band.newStart + (band.oldEnd - 1 - col)
+    : band.newStart + (col - band.oldStart);
+}
+function transformX(x) {
+  const centerCol = x / TILE;
+  const band = macroBands.find((b) => centerCol >= b.oldStart && centerCol < b.oldEnd);
+  if (!band) return x;
+  const local = centerCol - band.oldStart;
+  return (
+    (band.flip ? band.newStart + (band.oldEnd - band.oldStart - local) : band.newStart + local) *
+    TILE
+  );
+}
+
+const transformedCells = new Map();
+for (const [key, gid] of cells.entries()) {
+  const [row, col] = key.split(',').map(Number);
+  transformedCells.set(`${row},${transformCol(col)}`, gid);
+}
+cells.clear();
+for (const [key, gid] of transformedCells.entries()) cells.set(key, gid);
+
+for (const obj of [...entityObjects, ...checkpointObjects, ...sectionObjects]) {
+  obj.x = transformX(obj.x + obj.width / 2) - obj.width / 2;
+}
+for (const s of segments.slice(1)) {
+  const a = transformCol(s.colStart);
+  const b = transformCol(s.colEnd - 1) + 1;
+  s.colStart = Math.min(a, b);
+  s.colEnd = Math.max(a, b);
+}
+for (const d of crusherDoorways) d.col = Math.min(transformCol(d.col), transformCol(d.col + 1));
+
+// Android P0 regression: after the macro-band switchback transform, the
+// post-midboss checkpoint lands at the right edge of the midboss arena. The
+// next remix/multi-floor route climbs back above it, so the arena must expose
+// an actual, visible base-kit continuation instead of ending in a death void.
+// Build this in final/transformed tile coordinates so the generated Tiled map
+// and runtime collision agree exactly with the Android-observed screen 13→14
+// handoff.
+const postMidbossTransition = {
+  floorStartCol: segments[13].colEnd - 1,
+  floorEndCol: segments[13].colEnd + 20,
+  floorRow: segments[13].row,
+};
+fillFloor(
+  postMidbossTransition.floorStartCol,
+  postMidbossTransition.floorEndCol,
+  postMidbossTransition.floorRow,
+  FILL_DEPTH,
+);
+fillLedge(
+  postMidbossTransition.floorStartCol + 7,
+  postMidbossTransition.floorStartCol + 16,
+  postMidbossTransition.floorRow - 6,
+);
+fillLedge(
+  postMidbossTransition.floorStartCol + 2,
+  postMidbossTransition.floorStartCol + 12,
+  postMidbossTransition.floorRow - 12,
+);
+addHeatVent(
+  'heatVent-post-midboss-recovery',
+  {
+    left: postMidbossTransition.floorStartCol + 8,
+    right: postMidbossTransition.floorStartCol + 8 + SAFE_GAP_TILES,
+  },
+  postMidbossTransition.floorRow - 12,
+  postMidbossTransition.floorRow,
+  -150,
+);
+tagGimmick(14, 'heatVent');
+
+for (let c = transformCol(bossRoomColStart); c <= transformCol(bossRoomColStart) + 1; c += 1) {
+  for (let r = bossRoomRow - 3; r < bossRoomRow; r += 1) cells.delete(`${r},${c}`);
+}
+cursor.col = Math.max(...macroBands.map((b) => b.newStart + (b.oldEnd - b.oldStart)));
+
+// --- Section markers per beat ------------------------------------------
 for (const beat of beatToScreens) {
-  const first = segments[beat.start];
-  const last = segments[beat.end];
-  const colStart = first.colStart;
-  const colEnd = last.colEnd;
+  const cols = [];
   const rows = [];
   for (let n = beat.start; n <= beat.end; n += 1) {
     const s = segments[n];
+    cols.push(s.colStart, s.colEnd);
     rows.push(s.rowEnter, s.rowExit, s.row);
   }
+  const colStart = Math.min(...cols);
+  const colEnd = Math.max(...cols);
   const rowTop = Math.min(...rows) - 20;
   const rowBottom = Math.max(...rows) + 20;
   addSection(beat.name, colStart, colEnd, rowTop, rowBottom);
@@ -1202,7 +1321,7 @@ for (const key of cells.keys()) {
 }
 const ROW_MARGIN = 4;
 const rowOffset = ROW_MARGIN - Math.min(0, minRow);
-const width = Math.max(maxCol + 1, cursor.col);
+const width = maxCol + 1;
 const height = maxRow + rowOffset + ROW_MARGIN + 1;
 
 const grid = Array.from({ length: height }, () => new Array(width).fill(EMPTY));
@@ -1221,8 +1340,53 @@ shiftObjects(checkpointObjects);
 shiftObjects(entityObjects);
 shiftObjects(sectionObjects);
 
+// Final-grid invariant for the Android P0 screen 13→14 regression. This runs
+// after every transform/carve/motif pass, directly against the serialized Tiled
+// grid, so no later generator step can delete the verified landing. The
+// verifier derives the same columns from checkpoint-post-midboss; keep these
+// constants in sync with that intended route geometry.
+const POST_MIDBOSS_LANDING_ROW = 240;
+const POST_MIDBOSS_LANDING_COL_START = 271;
+const POST_MIDBOSS_LANDING_COL_END = 285;
+for (let col = POST_MIDBOSS_LANDING_COL_START; col <= POST_MIDBOSS_LANDING_COL_END; col += 1) {
+  grid[POST_MIDBOSS_LANDING_ROW][col] = TOP;
+  for (
+    let row = POST_MIDBOSS_LANDING_ROW + 1;
+    row <= POST_MIDBOSS_LANDING_ROW + FILL_DEPTH;
+    row += 1
+  ) {
+    grid[row][col] = FILL;
+  }
+}
+entityObjects.push({
+  id: nextId(),
+  type: 'postMidbossLanding',
+  name: 'postMidboss-bridge-landing',
+  x: POST_MIDBOSS_LANDING_COL_START * TILE,
+  y: POST_MIDBOSS_LANDING_ROW * TILE,
+  width: (POST_MIDBOSS_LANDING_COL_END - POST_MIDBOSS_LANDING_COL_START + 1) * TILE,
+  height: TILE,
+  visible: true,
+  properties: [
+    { name: 'minWidthTiles', type: 'int', value: 8 },
+    { name: 'baseKitReachable', type: 'bool', value: true },
+  ],
+});
+
 const flatData = [];
 for (let r = 0; r < height; r += 1) for (let c = 0; c < width; c += 1) flatData.push(grid[r][c]);
+
+const existingFoundryMapPath = 'src/data/stages/foundry.json';
+let preservedRouteMarkers = [];
+try {
+  const existingMap = JSON.parse(fs.readFileSync(existingFoundryMapPath, 'utf8'));
+  preservedRouteMarkers =
+    existingMap.layers.find(
+      (layer) => layer.type === 'objectgroup' && layer.name === 'routeMarkers',
+    )?.objects ?? [];
+} catch {
+  preservedRouteMarkers = [];
+}
 
 const map = {
   type: 'map',
@@ -1234,7 +1398,7 @@ const map = {
   tilewidth: TILE,
   tileheight: TILE,
   infinite: false,
-  nextlayerid: 6,
+  nextlayerid: preservedRouteMarkers.length > 0 ? 7 : 6,
   nextobjectid: objectId,
   tilesets: [
     {
@@ -1268,6 +1432,9 @@ const map = {
     { id: 3, type: 'objectgroup', name: 'hazards', objects: [] },
     { id: 4, type: 'objectgroup', name: 'entities', objects: entityObjects },
     { id: 5, type: 'objectgroup', name: 'sections', objects: sectionObjects },
+    ...(preservedRouteMarkers.length > 0
+      ? [{ id: 6, type: 'objectgroup', name: 'routeMarkers', objects: preservedRouteMarkers }]
+      : []),
   ],
 };
 
@@ -1477,7 +1644,8 @@ if (voidGapFailures > 0)
 // =====================================================================
 {
   const headroomRows = 3;
-  const entryCols = [bossRoomColStart, bossRoomColStart + 1];
+  const transformedBossRoomColStart = transformCol(bossRoomColStart);
+  const entryCols = [transformedBossRoomColStart, transformedBossRoomColStart + 1];
   const blockedRows = [];
   for (const col of entryCols) {
     for (let r = bossRoomRow - headroomRows; r < bossRoomRow; r += 1) {
@@ -1548,5 +1716,15 @@ console.log(`DESCENT (lava-fall, heat-vent slowfall): screens 29-30`);
 console.log(`BRANCH & REJOIN: screens ${branchRange.start}-${branchRange.end}`);
 
 const outPath = process.argv[2] || 'foundry.json';
-fs.writeFileSync(outPath, JSON.stringify(map));
+fs.writeFileSync(outPath, `${JSON.stringify(map, null, 2)}\n`);
+const prettierResult = spawnSync('npx', ['prettier', '--write', outPath], {
+  encoding: 'utf8',
+  stdio: 'pipe',
+});
+if (prettierResult.status !== 0) {
+  process.stderr.write(prettierResult.stderr);
+  process.stdout.write(prettierResult.stdout);
+  throw new Error(`Prettier failed while formatting ${outPath}`);
+}
+console.log(prettierResult.stdout.trim());
 console.log('Wrote', outPath, `(${fs.statSync(outPath).size} bytes)`);
