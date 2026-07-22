@@ -922,9 +922,9 @@ let lavaChaseShaftZoneObj;
     'risingLavaZone',
     'risingLava-chase',
     tileCenterX((shaftColStart + ledgeColEnd) / 2),
-    0,
+    ((chaseTopRow + chaseBottomRow) / 2) * TILE,
     (ledgeColEnd - shaftColStart) * TILE,
-    0,
+    (chaseBottomRow - chaseTopRow) * TILE,
     [
       { name: 'bottomRow', type: 'int', value: chaseBottomRow },
       { name: 'ceilingRow', type: 'int', value: chaseTopRow },
@@ -1172,15 +1172,15 @@ const beatToScreens = [];
   }
 }
 for (const beat of beatToScreens) {
-  const first = segments[beat.start];
-  const last = segments[beat.end];
-  const colStart = first.colStart;
-  const colEnd = last.colEnd;
+  const cols = [];
   const rows = [];
   for (let n = beat.start; n <= beat.end; n += 1) {
     const s = segments[n];
+    cols.push(s.colStart, s.colEnd);
     rows.push(s.rowEnter, s.rowExit, s.row);
   }
+  const colStart = Math.min(...cols);
+  const colEnd = Math.max(...cols);
   const rowTop = Math.min(...rows) - 20;
   const rowBottom = Math.max(...rows) + 20;
   addSection(beat.name, colStart, colEnd, rowTop, rowBottom);

@@ -5937,9 +5937,9 @@
           "type": "risingLavaZone",
           "name": "risingLava-chase",
           "x": 5568,
-          "y": 64,
+          "y": 2688,
           "width": 320,
-          "height": 0,
+          "height": 960,
           "visible": true,
           "properties": [
             { "name": "bottomRow", "type": "int", "value": 224 },
@@ -6262,7 +6262,7 @@
           "name": "setpiece",
           "x": 5568,
           "y": 2368,
-          "width": 192,
+          "width": 320,
           "height": 1600,
           "visible": true,
           "properties": []
