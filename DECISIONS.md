@@ -1599,3 +1599,10 @@ Two related GDD §3.2 "underwater float physics" failures around the setpiece's 
   Phaser itself. Not a problem yet, but flagging per rule #6 (performance floor) — if load time on
   a mid-range Android WebView becomes an issue, code-splitting Phaser out of the initial chunk is
   the first lever to pull, before cutting content.
+
+- **Foundry hazard object layer**: Ember Foundry intentionally keeps active hazards such as
+  `pistonCrusher`, `heatVent`, and `risingLavaZone` in the Tiled `entities` object layer, not the
+  empty `hazards` object layer. These hazards are actor-like spawned objects with constructor
+  properties, runtime behavior, and shared placement validation, so the verifier reads the
+  entities layer plus `foundry-verification.json` instead of treating the empty hazards layer as
+  authoritative. The reserved hazards layer remains available for future non-entity tile hazards.
