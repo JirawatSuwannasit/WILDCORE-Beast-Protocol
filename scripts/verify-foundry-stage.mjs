@@ -142,10 +142,9 @@ assert(
   totalScreens / encounters >= 1.5 && totalScreens / encounters <= 2,
   'encounter density outside target',
 );
-assert(
-  data.screens.reduce((sum, screen) => sum + screen.pickups.length, 0) >= 8,
-  'pickup count below target',
-);
+const metadataPickupCount = data.screens.reduce((sum, screen) => sum + screen.pickups.length, 0);
+assert(metadataPickupCount >= 8, 'pickup count below target');
+assert(metadataPickupCount <= 12, 'pickup count above target');
 assert(maxGap <= 3, 'mandatory gap exceeds base kit');
 assert(checkpoints.length === 4 && data.checkpoints.length === 4, 'checkpoint count invalid');
 for (const checkpoint of data.checkpoints) {
@@ -189,11 +188,7 @@ const rows = [
   ['screenLongestRun', String(longestRun(screenDirections)), '<=3'],
   ['nearFlatRun', String(longestNearFlatRun), '<=3'],
   ['encounterDensity', (totalScreens / encounters).toFixed(2), '1.5-2'],
-  [
-    'pickupCount',
-    String(data.screens.reduce((sum, screen) => sum + screen.pickups.length, 0)),
-    '8-12',
-  ],
+  ['pickupCount', String(metadataPickupCount), '8-12'],
   ['maxGapTiles', String(maxGap), '<=3'],
 ];
 console.table(rows.slice(1).map(([metric, value, target]) => ({ metric, value, target })));
