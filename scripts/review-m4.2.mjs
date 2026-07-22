@@ -12,9 +12,10 @@ const platform = `${os.type()} ${os.release()} ${os.arch()}`;
 const commands = [
   ['npm', ['ci']],
   ['npm', ['run', 'verify:foundry']],
-  ['npm', ['test']],
   ['npm', ['run', 'typecheck']],
   ['npm', ['run', 'lint']],
+  ['npm', ['run', 'format:check']],
+  ['npm', ['run', 'test']],
   ['npm', ['run', 'build']],
 ];
 let text = '';
@@ -245,7 +246,7 @@ const checks = [
     'automated-command-suite',
     'Review command suite',
     results,
-    'npm ci, verify, test, typecheck, lint, build exit 0',
+    'npm ci, verify, typecheck, lint, format:check, test, build exit 0',
     ['scripts/review-m4.2.mjs'],
   ),
   manual(

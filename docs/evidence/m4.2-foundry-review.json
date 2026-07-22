@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "stage": "M4.2 Ember Foundry",
-  "commitSha": "ad0329c55c2dbc7ef630814ce1d3a44d866cfa2b",
-  "generatedAtUtc": "2026-07-22T07:41:53.877Z",
+  "commitSha": "d4e09770311bd14abeb6e320d8aa278d403c6f09",
+  "generatedAtUtc": "2026-07-22T08:24:56.931Z",
   "overallAutomatedStatus": "PASS",
   "sourceMapPath": "src/data/stages/foundry.json",
   "checks": [
@@ -356,10 +356,6 @@
           "exitCode": 0
         },
         {
-          "command": "npm test",
-          "exitCode": 0
-        },
-        {
           "command": "npm run typecheck",
           "exitCode": 0
         },
@@ -368,11 +364,19 @@
           "exitCode": 0
         },
         {
+          "command": "npm run format:check",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run test",
+          "exitCode": 0
+        },
+        {
           "command": "npm run build",
           "exitCode": 0
         }
       ],
-      "expected": "npm ci, verify, test, typecheck, lint, build exit 0",
+      "expected": "npm ci, verify, typecheck, lint, format:check, test, build exit 0",
       "sourceFiles": [
         "scripts/review-m4.2.mjs"
       ],
