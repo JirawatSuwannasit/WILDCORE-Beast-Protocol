@@ -116,7 +116,8 @@ Exit code: 0
 > tsc -b && vite build
 
 vite v8.1.5 building client environment for production...
-[2Ktransforming...✓ 103 modules transformed.
+[2K
+transforming...✓ 103 modules transformed.
 rendering chunks...
 computing gzip size...
 dist/index.html                    1.51 kB │ gzip:   0.71 kB
