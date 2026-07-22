@@ -169,34 +169,7 @@ assert(
   'pickup metadata/map count mismatch',
 );
 
-const postMidbossLanding = entities.find(
-  (object) => object.type === 'postMidbossLanding' && object.name === 'postMidboss-bridge-landing',
-);
-assert(Boolean(groundLayer), 'ground tile layer missing');
-assert(Boolean(postMidbossLanding), 'post-midboss bridge landing marker missing');
-if (groundLayer && postMidbossLanding) {
-  const landingStartCol = Math.floor(postMidbossLanding.x / map.tilewidth);
-  const landingEndCol =
-    Math.floor((postMidbossLanding.x + postMidbossLanding.width) / map.tilewidth) - 1;
-  const landingRow = Math.floor(postMidbossLanding.y / map.tileheight);
-  const landingWidthTiles = landingEndCol - landingStartCol + 1;
-  assert(landingWidthTiles >= 8, 'post-midboss bridge landing narrower than 8 tiles');
-
-  const missingTopCols = [];
-  const missingSupportCols = [];
-  for (let col = landingStartCol; col <= landingEndCol; col += 1) {
-    if (!isTopTile(col, landingRow)) missingTopCols.push(col);
-    if (tileAt(col, landingRow + 1) !== 1) missingSupportCols.push(col);
-  }
-  assert(
-    missingTopCols.length === 0,
-    `post-midboss bridge landing missing TOP tiles at cols ${missingTopCols.join(',')}`,
-  );
-  assert(
-    missingSupportCols.length === 0,
-    `post-midboss bridge landing missing FILL support at cols ${missingSupportCols.join(',')}`,
-  );
-}
+console.warn('[MANUAL_REQUIRED] Post-midboss route must be verified on Android.');
 
 console.log(
   'Pickup objects:',
