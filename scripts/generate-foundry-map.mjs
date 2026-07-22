@@ -1340,6 +1340,25 @@ shiftObjects(checkpointObjects);
 shiftObjects(entityObjects);
 shiftObjects(sectionObjects);
 
+// Final-grid invariant for the Android P0 screen 13→14 regression. This runs
+// after every transform/carve/motif pass, directly against the serialized Tiled
+// grid, so no later generator step can delete the verified landing. The
+// verifier derives the same columns from checkpoint-post-midboss; keep these
+// constants in sync with that intended route geometry.
+const POST_MIDBOSS_LANDING_ROW = 240;
+const POST_MIDBOSS_LANDING_COL_START = 271;
+const POST_MIDBOSS_LANDING_COL_END = 285;
+for (let col = POST_MIDBOSS_LANDING_COL_START; col <= POST_MIDBOSS_LANDING_COL_END; col += 1) {
+  grid[POST_MIDBOSS_LANDING_ROW][col] = TOP;
+  for (
+    let row = POST_MIDBOSS_LANDING_ROW + 1;
+    row <= POST_MIDBOSS_LANDING_ROW + FILL_DEPTH;
+    row += 1
+  ) {
+    grid[row][col] = FILL;
+  }
+}
+
 const flatData = [];
 for (let r = 0; r < height; r += 1) for (let c = 0; c < width; c += 1) flatData.push(grid[r][c]);
 
