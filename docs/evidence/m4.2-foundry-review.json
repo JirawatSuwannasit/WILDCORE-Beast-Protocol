@@ -1,0 +1,443 @@
+{
+  "schemaVersion": 1,
+  "stage": "M4.2 Ember Foundry",
+  "commitSha": "d4e09770311bd14abeb6e320d8aa278d403c6f09",
+  "generatedAtUtc": "2026-07-22T08:24:56.931Z",
+  "overallAutomatedStatus": "PASS",
+  "sourceMapPath": "src/data/stages/foundry.json",
+  "checks": [
+    {
+      "id": "map-load",
+      "requirement": "Load real Tiled map",
+      "status": "PASS",
+      "measuredValue": "src/data/stages/foundry.json loaded",
+      "expected": "map JSON parses",
+      "sourceFiles": [
+        "src/data/stages/foundry.json"
+      ],
+      "sourceObjectIds": [],
+      "notes": ""
+    },
+    {
+      "id": "map-dimensions",
+      "requirement": "GDD §2.6 map bounds",
+      "status": "PASS",
+      "measuredValue": "368x285 tiles",
+      "expected": "known generated Foundry bounds",
+      "sourceFiles": [
+        "src/data/stages/foundry.json"
+      ],
+      "sourceObjectIds": [],
+      "notes": ""
+    },
+    {
+      "id": "route-node-order",
+      "requirement": "Ordered routeNode markers",
+      "status": "PASS",
+      "measuredValue": "36 ordered markers",
+      "expected": "unique sequence indexes 0-35",
+      "sourceFiles": [
+        "src/data/stages/foundry.json",
+        "src/data/stages/foundry-verification.json"
+      ],
+      "sourceObjectIds": [],
+      "notes": ""
+    },
+    {
+      "id": "route-position-crosscheck",
+      "requirement": "Metadata/map route marker coordinate agreement",
+      "status": "PASS",
+      "measuredValue": "all routeNode positions match",
+      "expected": "zero mismatches",
+      "sourceFiles": [
+        "scripts/verify-foundry-stage.mjs"
+      ],
+      "sourceObjectIds": [],
+      "notes": ""
+    },
+    {
+      "id": "route-traversal-distance",
+      "requirement": "GDD §2.6 traversal length",
+      "status": "PASS",
+      "measuredValue": "11200 px Manhattan polyline",
+      "expected": "9000-11500 px",
+      "sourceFiles": [
+        "scripts/verify-foundry-stage.mjs"
+      ],
+      "sourceObjectIds": [],
+      "notes": ""
+    },
+    {
+      "id": "route-direction-changes",
+      "requirement": "GDD §2.6 anti-corridor direction changes",
+      "status": "PASS",
+      "measuredValue": "7 macro changes",
+      "expected": ">=4",
+      "sourceFiles": [
+        "src/data/stages/foundry-verification.json"
+      ],
+      "sourceObjectIds": [],
+      "notes": ""
+    },
+    {
+      "id": "route-longest-direction-run",
+      "requirement": "GDD §2.6 same-direction run",
+      "status": "PASS",
+      "measuredValue": "3 screens",
+      "expected": "<=3",
+      "sourceFiles": [
+        "src/data/stages/foundry-verification.json"
+      ],
+      "sourceObjectIds": [],
+      "notes": ""
+    },
+    {
+      "id": "route-vertical-percentage",
+      "requirement": "GDD §2.6 vertical dominant target",
+      "status": "PASS",
+      "measuredValue": "51.43%",
+      "expected": ">=35%",
+      "sourceFiles": [
+        "scripts/verify-foundry-stage.mjs"
+      ],
+      "sourceObjectIds": [],
+      "notes": ""
+    },
+    {
+      "id": "route-screen-count",
+      "requirement": "GDD §2.6 screen count",
+      "status": "PASS",
+      "measuredValue": "35 screens",
+      "expected": "28-36",
+      "sourceFiles": [
+        "src/data/stages/foundry-verification.json"
+      ],
+      "sourceObjectIds": [],
+      "notes": ""
+    },
+    {
+      "id": "pickup-count",
+      "requirement": "GDD §2.6 pickup count",
+      "status": "PASS",
+      "measuredValue": "11 pickups",
+      "expected": "8-12",
+      "sourceFiles": [
+        "scripts/verify-foundry-stage.mjs"
+      ],
+      "sourceObjectIds": [],
+      "notes": ""
+    },
+    {
+      "id": "pickup-map-metadata-crosscheck",
+      "requirement": "Pickup metadata agrees with Tiled objects",
+      "status": "PASS",
+      "measuredValue": "11 map pickups / 11 metadata pickups",
+      "expected": "counts and IDs agree",
+      "sourceFiles": [
+        "scripts/verify-foundry-stage.mjs",
+        "src/data/stages/foundry.json"
+      ],
+      "sourceObjectIds": [],
+      "notes": ""
+    },
+    {
+      "id": "hazard-introduction-by-room",
+      "requirement": "No two new hazards in same room",
+      "status": "PASS",
+      "measuredValue": "heatVent tutorial, pistonCrusher escalation, risingLava setpiece",
+      "expected": "unique first rooms",
+      "sourceFiles": [
+        "scripts/verify-foundry-stage.mjs"
+      ],
+      "sourceObjectIds": [],
+      "notes": ""
+    },
+    {
+      "id": "branch-fork",
+      "requirement": "Branch fork marker exists",
+      "status": "PASS",
+      "measuredValue": "foundry-branchFork",
+      "expected": "marker present",
+      "sourceFiles": [
+        "src/data/stages/foundry.json"
+      ],
+      "sourceObjectIds": [
+        "foundry-branchFork"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "branch-upper-route",
+      "requirement": "Upper route markers and risk profile",
+      "status": "PASS",
+      "measuredValue": "upper start/end present, crusher/pickup exposure",
+      "expected": "optional faster/riskier route",
+      "sourceFiles": [
+        "src/data/stages/foundry.json"
+      ],
+      "sourceObjectIds": [],
+      "notes": ""
+    },
+    {
+      "id": "branch-lower-route",
+      "requirement": "Lower route markers and safety profile",
+      "status": "PASS",
+      "measuredValue": "lower start/end present, fewer hazards",
+      "expected": "base-kit safer/slower route",
+      "sourceFiles": [
+        "src/data/stages/foundry.json"
+      ],
+      "sourceObjectIds": [],
+      "notes": ""
+    },
+    {
+      "id": "branch-rejoin",
+      "requirement": "Branch rejoin marker exists",
+      "status": "PASS",
+      "measuredValue": "foundry-branchRejoin",
+      "expected": "both routes rejoin",
+      "sourceFiles": [
+        "src/data/stages/foundry.json"
+      ],
+      "sourceObjectIds": [
+        "foundry-branchRejoin"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "branch-route-comparison",
+      "requirement": "Branch route comparison",
+      "status": "PASS",
+      "measuredValue": "upper ESTIMATED 18s, lower ESTIMATED 25s",
+      "expected": "upper faster or documented model",
+      "sourceFiles": [
+        "src/data/stages/foundry-verification.json"
+      ],
+      "sourceObjectIds": [],
+      "notes": ""
+    },
+    {
+      "id": "checkpoint-count",
+      "requirement": "GDD §2.6 checkpoint count",
+      "status": "PASS",
+      "measuredValue": "4 checkpoints",
+      "expected": "4",
+      "sourceFiles": [
+        "src/data/stages/foundry.json"
+      ],
+      "sourceObjectIds": [],
+      "notes": ""
+    },
+    {
+      "id": "checkpoint-semantic-placement",
+      "requirement": "Checkpoint semantic placement",
+      "status": "PASS",
+      "measuredValue": "start/post-midboss/post-setpiece/preboss",
+      "expected": "ordered semantic positions",
+      "sourceFiles": [
+        "src/data/stages/foundry-verification.json"
+      ],
+      "sourceObjectIds": [],
+      "notes": ""
+    },
+    {
+      "id": "multi-floor-route-geometry",
+      "requirement": "Multi-floor route geometry",
+      "status": "PASS",
+      "measuredValue": "3 floor choices with markers",
+      "expected": ">=2 distinct paths",
+      "sourceFiles": [
+        "src/data/stages/foundry.json",
+        "src/data/stages/foundry-verification.json"
+      ],
+      "sourceObjectIds": [],
+      "notes": ""
+    },
+    {
+      "id": "controlled-descent-map-runtime-crosscheck",
+      "requirement": "Controlled descent map/runtime agreement",
+      "status": "PASS",
+      "measuredValue": "maxFallSpeedY=130",
+      "expected": "map property consumed by runtime",
+      "sourceFiles": [
+        "src/data/stages/foundry.json",
+        "src/scenes/FoundryScene.ts"
+      ],
+      "sourceObjectIds": [
+        "controlledDescent-lavafall"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "controlled-descent-speed-cap-test",
+      "requirement": "Controlled descent speed-cap tests",
+      "status": "PASS",
+      "measuredValue": "foundryMechanics tests pass",
+      "expected": "downward velocity capped, no upward launch",
+      "sourceFiles": [
+        "src/systems/foundryMechanics.test.ts"
+      ],
+      "sourceObjectIds": [],
+      "notes": ""
+    },
+    {
+      "id": "final-exam-order",
+      "requirement": "Final exam order",
+      "status": "PASS",
+      "measuredValue": "after setpiece before preboss",
+      "expected": "correct beat ordering",
+      "sourceFiles": [
+        "src/data/stages/foundry-verification.json"
+      ],
+      "sourceObjectIds": [],
+      "notes": ""
+    },
+    {
+      "id": "final-exam-mechanic-reuse",
+      "requirement": "Final exam mechanic reuse",
+      "status": "PASS",
+      "measuredValue": "heatVent+pistonCrusher+enemies after introductions",
+      "expected": "no new hazards",
+      "sourceFiles": [
+        "src/data/stages/foundry-verification.json"
+      ],
+      "sourceObjectIds": [],
+      "notes": ""
+    },
+    {
+      "id": "map-object-bounds",
+      "requirement": "Map object bounds",
+      "status": "PASS",
+      "measuredValue": "all checked objects inside map bounds",
+      "expected": "no out-of-bounds required objects",
+      "sourceFiles": [
+        "scripts/verify-foundry-stage.mjs"
+      ],
+      "sourceObjectIds": [],
+      "notes": ""
+    },
+    {
+      "id": "route-node-solid-tile",
+      "requirement": "Route nodes avoid solid tiles",
+      "status": "PASS",
+      "measuredValue": "all route nodes checked",
+      "expected": "no route node in solid",
+      "sourceFiles": [
+        "scripts/verify-foundry-stage.mjs"
+      ],
+      "sourceObjectIds": [],
+      "notes": ""
+    },
+    {
+      "id": "boss-entry-connectivity",
+      "requirement": "Boss entry connectivity",
+      "status": "PASS",
+      "measuredValue": "bossEntry marker connects after preboss",
+      "expected": "reachable final marker to boss entry",
+      "sourceFiles": [
+        "src/data/stages/foundry.json"
+      ],
+      "sourceObjectIds": [
+        "foundry-bossEntry"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "automated-command-suite",
+      "requirement": "Review command suite",
+      "status": "PASS",
+      "measuredValue": [
+        {
+          "command": "npm ci",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run verify:foundry",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run typecheck",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run lint",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run format:check",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run test",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run build",
+          "exitCode": 0
+        }
+      ],
+      "expected": "npm ci, verify, typecheck, lint, format:check, test, build exit 0",
+      "sourceFiles": [
+        "scripts/review-m4.2.mjs"
+      ],
+      "sourceObjectIds": [],
+      "notes": ""
+    },
+    {
+      "id": "android-visible-landing",
+      "requirement": "Manual Android validation: visible lava-fall landing before commitment",
+      "status": "MANUAL_REQUIRED",
+      "measuredValue": null,
+      "expected": "PO confirms on Android debug APK",
+      "sourceFiles": [
+        "docs/evidence/m4.2-android-checklist.md"
+      ],
+      "sourceObjectIds": [
+        "controlledDescent-lavafall"
+      ],
+      "notes": "Camera/visual readability is not honestly proven by static geometry alone."
+    },
+    {
+      "id": "android-thumb-comfort",
+      "requirement": "Manual Android validation: touch comfort and completion timing",
+      "status": "MANUAL_REQUIRED",
+      "measuredValue": null,
+      "expected": "PO records device, tester, blind/practiced times",
+      "sourceFiles": [
+        "docs/evidence/m4.2-android-checklist.md"
+      ],
+      "sourceObjectIds": [],
+      "notes": "Codex did not perform physical Android testing."
+    },
+    {
+      "id": "android-crusher-readability",
+      "requirement": "Manual Android validation: crusher readability",
+      "status": "MANUAL_REQUIRED",
+      "measuredValue": null,
+      "expected": "PO confirms two-cycle rhythm and open window on touch",
+      "sourceFiles": [
+        "docs/evidence/m4.2-android-checklist.md"
+      ],
+      "sourceObjectIds": [],
+      "notes": "Requires physical play feel."
+    },
+    {
+      "id": "android-blind-drop-readability",
+      "requirement": "Manual Android validation: blind-drop visual readability",
+      "status": "MANUAL_REQUIRED",
+      "measuredValue": null,
+      "expected": "PO confirms no unreadable blind drop on device",
+      "sourceFiles": [
+        "docs/evidence/m4.2-android-checklist.md"
+      ],
+      "sourceObjectIds": [],
+      "notes": "Static verifier does not assert camera readability as PASS."
+    }
+  ],
+  "manualChecksRemaining": [
+    "android-visible-landing",
+    "android-thumb-comfort",
+    "android-crusher-readability",
+    "android-blind-drop-readability"
+  ]
+}

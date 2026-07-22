@@ -15,6 +15,7 @@ import { PistonCrusher } from '@/actors/hazards/PistonCrusher';
 import { RisingLavaZone } from '@/actors/hazards/RisingLavaZone';
 import { SlagFlamePool } from '@/actors/hazards/SlagFlame';
 import { slagFlameTuning } from '@/config/enemyTuning';
+import { applyLavafallSlowfall } from '@/systems/foundryMechanics';
 import { TILE_SIZE } from '@/config/playerTuning';
 
 const ARENA_MARGIN = 24;
@@ -40,6 +41,10 @@ export class FoundryScene extends BaseStageScene {
   private readonly heatVents: HeatVent[] = [];
   private readonly crushers: PistonCrusher[] = [];
   private readonly lavaZones: RisingLavaZone[] = [];
+  private readonly controlledDescentZones: Array<{
+    zone: Phaser.GameObjects.Zone;
+    maxFallSpeedY: number;
+  }> = [];
   private slagFlames!: SlagFlamePool;
 
   private lavaChaseTriggerZoneRef: Phaser.GameObjects.Zone | null = null;
@@ -101,6 +106,15 @@ export class FoundryScene extends BaseStageScene {
       const zone = this.add.zone(x, y, object.width, object.height);
       this.physics.add.existing(zone, true);
       this.lavaChaseTriggerZoneRef = zone;
+    },
+
+    controlledDescentZone: (_scene, x, y, object) => {
+      const zone = this.add.zone(x, y, object.width, object.height);
+      this.physics.add.existing(zone, true);
+      this.controlledDescentZones.push({
+        zone,
+        maxFallSpeedY: getObjectProperty(object, 'maxFallSpeedY', 130),
+      });
     },
 
     ascentShaftZone: (_scene, x, y, object) => {
@@ -205,6 +219,17 @@ export class FoundryScene extends BaseStageScene {
     }
     if (pushed) this.player.applyCurrentPush(pushX, pushY);
     else this.player.applyCurrentPush(0, 0);
+
+    const playerBody = this.player.body as Phaser.Physics.Arcade.Body | null;
+    if (playerBody) {
+      for (const descent of this.controlledDescentZones) {
+        if (this.physics.overlap(this.player.hurtboxZone, descent.zone)) {
+          playerBody.setVelocityY(
+            applyLavafallSlowfall(playerBody.velocity.y, descent.maxFallSpeedY),
+          );
+        }
+      }
+    }
 
     for (const crusher of this.crushers) crusher.fixedUpdate();
 
