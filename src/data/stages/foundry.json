@@ -3888,6 +3888,87 @@
       "name": "entities",
       "objects": [
         {
+          "id": 2,
+          "type": "checkpoint",
+          "name": "checkpoint-start",
+          "x": 24,
+          "y": 4208,
+          "width": 16,
+          "height": 16,
+          "visible": true,
+          "properties": [
+            {
+              "name": "order",
+              "type": "int",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": 15,
+          "type": "checkpoint",
+          "name": "checkpoint-post-midboss",
+          "x": 4040,
+          "y": 3824,
+          "width": 16,
+          "height": 16,
+          "visible": true,
+          "properties": [
+            {
+              "name": "order",
+              "type": "int",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "id": 40,
+          "type": "checkpoint",
+          "name": "checkpoint-post-setpiece",
+          "x": 3192,
+          "y": 2672,
+          "width": 16,
+          "height": 16,
+          "visible": true,
+          "properties": [
+            {
+              "name": "order",
+              "type": "int",
+              "value": 2
+            }
+          ]
+        },
+        {
+          "id": 59,
+          "type": "checkpoint",
+          "name": "checkpoint-preboss",
+          "x": 5176,
+          "y": 2992,
+          "width": 16,
+          "height": 16,
+          "visible": true,
+          "properties": [
+            {
+              "name": "order",
+              "type": "int",
+              "value": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "objectgroup",
+      "name": "hazards",
+      "objects": []
+    },
+    {
+      "id": 4,
+      "type": "objectgroup",
+      "name": "entities",
+      "objects": [
+        {
           "id": 1,
           "type": "playerSpawn",
           "name": "playerSpawn",

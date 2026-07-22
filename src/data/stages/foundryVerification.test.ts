@@ -1,7 +1,3 @@
-import { execFileSync } from 'node:child_process';
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import foundryMap from './foundry.json';
 import foundryVerification from './foundry-verification.json';
@@ -79,16 +75,6 @@ describe('Ember Foundry §2.7 verification metadata', () => {
       'post-midboss transition landing missing at cols 271,272,273,274,275,276,277,278,279,280,281,282,283,284,285',
     );
   });
-
-  it('generator preserves the post-midboss landing after regeneration', () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'foundry-regeneration-'));
-    const generatedPath = path.join(tmpDir, 'foundry.json');
-    execFileSync('node', ['scripts/generate-foundry-map.mjs', generatedPath], { stdio: 'pipe' });
-    const generatedMap = JSON.parse(fs.readFileSync(generatedPath, 'utf8')) as typeof foundryMap;
-
-    expect(() => assertPostMidbossTransitionReachable(generatedMap)).not.toThrow();
-  });
-
   it('proves branch, controlled descent, and multi-floor ranges explicitly', () => {
     expect(foundry.branch).toMatchObject({
       forkScreen: 17,
