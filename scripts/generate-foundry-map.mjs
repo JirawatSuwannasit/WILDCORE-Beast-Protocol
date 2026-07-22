@@ -922,9 +922,9 @@ let lavaChaseShaftZoneObj;
     'risingLavaZone',
     'risingLava-chase',
     tileCenterX((shaftColStart + ledgeColEnd) / 2),
-    0,
+    ((chaseTopRow + chaseBottomRow) / 2) * TILE,
     (ledgeColEnd - shaftColStart) * TILE,
-    0,
+    (chaseBottomRow - chaseTopRow) * TILE,
     [
       { name: 'bottomRow', type: 'int', value: chaseBottomRow },
       { name: 'ceilingRow', type: 'int', value: chaseTopRow },
@@ -1160,7 +1160,7 @@ addEntity(
 addSection('bossRoom', bossRoomColStart, bossRoomColEnd, bossRoomRow - 40, bossRoomRow + 4);
 cursor.col = bossRoomColEnd;
 
-// --- Section markers per beat ------------------------------------------
+// --- Switchback macro relayout -----------------------------------------
 const beatToScreens = [];
 {
   let idx = 1;
@@ -1171,16 +1171,78 @@ const beatToScreens = [];
     idx = end + 1;
   }
 }
+
+function segmentColRange(start, end) {
+  const cols = [];
+  for (let n = start; n <= end; n += 1) cols.push(segments[n].colStart, segments[n].colEnd);
+  return { oldStart: Math.min(...cols), oldEnd: Math.max(...cols) };
+}
+const macroBands = beatToScreens.map((beat, i) => ({
+  name: beat.name,
+  ...segmentColRange(beat.start, beat.end),
+  newStart: [0, 60, 54, 251, 146, 191, 272, 256, 302][i],
+  flip: [false, false, false, true, true, false, false, false, false][i],
+}));
+macroBands.push({
+  name: 'bossRoom',
+  oldStart: bossRoomColStart,
+  oldEnd: bossRoomColEnd,
+  newStart: 342,
+  flip: false,
+});
+
+function transformCol(col) {
+  const band = macroBands.find((b) => col >= b.oldStart && col < b.oldEnd);
+  if (!band) return col;
+  return band.flip
+    ? band.newStart + (band.oldEnd - 1 - col)
+    : band.newStart + (col - band.oldStart);
+}
+function transformX(x) {
+  const centerCol = x / TILE;
+  const band = macroBands.find((b) => centerCol >= b.oldStart && centerCol < b.oldEnd);
+  if (!band) return x;
+  const local = centerCol - band.oldStart;
+  return (
+    (band.flip ? band.newStart + (band.oldEnd - band.oldStart - local) : band.newStart + local) *
+    TILE
+  );
+}
+
+const transformedCells = new Map();
+for (const [key, gid] of cells.entries()) {
+  const [row, col] = key.split(',').map(Number);
+  transformedCells.set(`${row},${transformCol(col)}`, gid);
+}
+cells.clear();
+for (const [key, gid] of transformedCells.entries()) cells.set(key, gid);
+
+for (const obj of [...entityObjects, ...checkpointObjects, ...sectionObjects]) {
+  obj.x = transformX(obj.x + obj.width / 2) - obj.width / 2;
+}
+for (const s of segments.slice(1)) {
+  const a = transformCol(s.colStart);
+  const b = transformCol(s.colEnd - 1) + 1;
+  s.colStart = Math.min(a, b);
+  s.colEnd = Math.max(a, b);
+}
+for (const d of crusherDoorways) d.col = Math.min(transformCol(d.col), transformCol(d.col + 1));
+for (let c = transformCol(bossRoomColStart); c <= transformCol(bossRoomColStart) + 1; c += 1) {
+  for (let r = bossRoomRow - 3; r < bossRoomRow; r += 1) cells.delete(`${r},${c}`);
+}
+cursor.col = Math.max(...macroBands.map((b) => b.newStart + (b.oldEnd - b.oldStart)));
+
+// --- Section markers per beat ------------------------------------------
 for (const beat of beatToScreens) {
-  const first = segments[beat.start];
-  const last = segments[beat.end];
-  const colStart = first.colStart;
-  const colEnd = last.colEnd;
+  const cols = [];
   const rows = [];
   for (let n = beat.start; n <= beat.end; n += 1) {
     const s = segments[n];
+    cols.push(s.colStart, s.colEnd);
     rows.push(s.rowEnter, s.rowExit, s.row);
   }
+  const colStart = Math.min(...cols);
+  const colEnd = Math.max(...cols);
   const rowTop = Math.min(...rows) - 20;
   const rowBottom = Math.max(...rows) + 20;
   addSection(beat.name, colStart, colEnd, rowTop, rowBottom);
@@ -1202,7 +1264,7 @@ for (const key of cells.keys()) {
 }
 const ROW_MARGIN = 4;
 const rowOffset = ROW_MARGIN - Math.min(0, minRow);
-const width = Math.max(maxCol + 1, cursor.col);
+const width = maxCol + 1;
 const height = maxRow + rowOffset + ROW_MARGIN + 1;
 
 const grid = Array.from({ length: height }, () => new Array(width).fill(EMPTY));
@@ -1477,7 +1539,8 @@ if (voidGapFailures > 0)
 // =====================================================================
 {
   const headroomRows = 3;
-  const entryCols = [bossRoomColStart, bossRoomColStart + 1];
+  const transformedBossRoomColStart = transformCol(bossRoomColStart);
+  const entryCols = [transformedBossRoomColStart, transformedBossRoomColStart + 1];
   const blockedRows = [];
   for (const col of entryCols) {
     for (let r = bossRoomRow - headroomRows; r < bossRoomRow; r += 1) {
