@@ -12,9 +12,7 @@
       "status": "PASS",
       "measuredValue": "src/data/stages/foundry.json loaded",
       "expected": "map JSON parses",
-      "sourceFiles": [
-        "src/data/stages/foundry.json"
-      ],
+      "sourceFiles": ["src/data/stages/foundry.json"],
       "sourceObjectIds": [],
       "notes": ""
     },
@@ -24,9 +22,7 @@
       "status": "PASS",
       "measuredValue": "368x285 tiles",
       "expected": "known generated Foundry bounds",
-      "sourceFiles": [
-        "src/data/stages/foundry.json"
-      ],
+      "sourceFiles": ["src/data/stages/foundry.json"],
       "sourceObjectIds": [],
       "notes": ""
     },
@@ -36,10 +32,7 @@
       "status": "PASS",
       "measuredValue": "36 ordered markers",
       "expected": "unique sequence indexes 0-35",
-      "sourceFiles": [
-        "src/data/stages/foundry.json",
-        "src/data/stages/foundry-verification.json"
-      ],
+      "sourceFiles": ["src/data/stages/foundry.json", "src/data/stages/foundry-verification.json"],
       "sourceObjectIds": [],
       "notes": ""
     },
@@ -49,9 +42,7 @@
       "status": "PASS",
       "measuredValue": "all routeNode positions match",
       "expected": "zero mismatches",
-      "sourceFiles": [
-        "scripts/verify-foundry-stage.mjs"
-      ],
+      "sourceFiles": ["scripts/verify-foundry-stage.mjs"],
       "sourceObjectIds": [],
       "notes": ""
     },
@@ -61,9 +52,7 @@
       "status": "PASS",
       "measuredValue": "11200 px Manhattan polyline",
       "expected": "9000-11500 px",
-      "sourceFiles": [
-        "scripts/verify-foundry-stage.mjs"
-      ],
+      "sourceFiles": ["scripts/verify-foundry-stage.mjs"],
       "sourceObjectIds": [],
       "notes": ""
     },
@@ -73,9 +62,7 @@
       "status": "PASS",
       "measuredValue": "7 macro changes",
       "expected": ">=4",
-      "sourceFiles": [
-        "src/data/stages/foundry-verification.json"
-      ],
+      "sourceFiles": ["src/data/stages/foundry-verification.json"],
       "sourceObjectIds": [],
       "notes": ""
     },
@@ -85,9 +72,7 @@
       "status": "PASS",
       "measuredValue": "3 screens",
       "expected": "<=3",
-      "sourceFiles": [
-        "src/data/stages/foundry-verification.json"
-      ],
+      "sourceFiles": ["src/data/stages/foundry-verification.json"],
       "sourceObjectIds": [],
       "notes": ""
     },
@@ -97,9 +82,7 @@
       "status": "PASS",
       "measuredValue": "51.43%",
       "expected": ">=35%",
-      "sourceFiles": [
-        "scripts/verify-foundry-stage.mjs"
-      ],
+      "sourceFiles": ["scripts/verify-foundry-stage.mjs"],
       "sourceObjectIds": [],
       "notes": ""
     },
@@ -109,9 +92,7 @@
       "status": "PASS",
       "measuredValue": "35 screens",
       "expected": "28-36",
-      "sourceFiles": [
-        "src/data/stages/foundry-verification.json"
-      ],
+      "sourceFiles": ["src/data/stages/foundry-verification.json"],
       "sourceObjectIds": [],
       "notes": ""
     },
@@ -121,9 +102,7 @@
       "status": "PASS",
       "measuredValue": "11 pickups",
       "expected": "8-12",
-      "sourceFiles": [
-        "scripts/verify-foundry-stage.mjs"
-      ],
+      "sourceFiles": ["scripts/verify-foundry-stage.mjs"],
       "sourceObjectIds": [],
       "notes": ""
     },
@@ -133,10 +112,7 @@
       "status": "PASS",
       "measuredValue": "11 map pickups / 11 metadata pickups",
       "expected": "counts and IDs agree",
-      "sourceFiles": [
-        "scripts/verify-foundry-stage.mjs",
-        "src/data/stages/foundry.json"
-      ],
+      "sourceFiles": ["scripts/verify-foundry-stage.mjs", "src/data/stages/foundry.json"],
       "sourceObjectIds": [],
       "notes": ""
     },
@@ -146,9 +122,7 @@
       "status": "PASS",
       "measuredValue": "heatVent tutorial, pistonCrusher escalation, risingLava setpiece",
       "expected": "unique first rooms",
-      "sourceFiles": [
-        "scripts/verify-foundry-stage.mjs"
-      ],
+      "sourceFiles": ["scripts/verify-foundry-stage.mjs"],
       "sourceObjectIds": [],
       "notes": ""
     },
@@ -158,12 +132,8 @@
       "status": "PASS",
       "measuredValue": "foundry-branchFork",
       "expected": "marker present",
-      "sourceFiles": [
-        "src/data/stages/foundry.json"
-      ],
-      "sourceObjectIds": [
-        "foundry-branchFork"
-      ],
+      "sourceFiles": ["src/data/stages/foundry.json"],
+      "sourceObjectIds": ["foundry-branchFork"],
       "notes": ""
     },
     {
@@ -172,9 +142,7 @@
       "status": "PASS",
       "measuredValue": "upper start/end present, crusher/pickup exposure",
       "expected": "optional faster/riskier route",
-      "sourceFiles": [
-        "src/data/stages/foundry.json"
-      ],
+      "sourceFiles": ["src/data/stages/foundry.json"],
       "sourceObjectIds": [],
       "notes": ""
     },
@@ -184,9 +152,7 @@
       "status": "PASS",
       "measuredValue": "lower start/end present, fewer hazards",
       "expected": "base-kit safer/slower route",
-      "sourceFiles": [
-        "src/data/stages/foundry.json"
-      ],
+      "sourceFiles": ["src/data/stages/foundry.json"],
       "sourceObjectIds": [],
       "notes": ""
     },
@@ -196,12 +162,8 @@
       "status": "PASS",
       "measuredValue": "foundry-branchRejoin",
       "expected": "both routes rejoin",
-      "sourceFiles": [
-        "src/data/stages/foundry.json"
-      ],
-      "sourceObjectIds": [
-        "foundry-branchRejoin"
-      ],
+      "sourceFiles": ["src/data/stages/foundry.json"],
+      "sourceObjectIds": ["foundry-branchRejoin"],
       "notes": ""
     },
     {
@@ -210,9 +172,7 @@
       "status": "PASS",
       "measuredValue": "upper ESTIMATED 18s, lower ESTIMATED 25s",
       "expected": "upper faster or documented model",
-      "sourceFiles": [
-        "src/data/stages/foundry-verification.json"
-      ],
+      "sourceFiles": ["src/data/stages/foundry-verification.json"],
       "sourceObjectIds": [],
       "notes": ""
     },
@@ -222,9 +182,7 @@
       "status": "PASS",
       "measuredValue": "4 checkpoints",
       "expected": "4",
-      "sourceFiles": [
-        "src/data/stages/foundry.json"
-      ],
+      "sourceFiles": ["src/data/stages/foundry.json"],
       "sourceObjectIds": [],
       "notes": ""
     },
@@ -234,9 +192,7 @@
       "status": "PASS",
       "measuredValue": "start/post-midboss/post-setpiece/preboss",
       "expected": "ordered semantic positions",
-      "sourceFiles": [
-        "src/data/stages/foundry-verification.json"
-      ],
+      "sourceFiles": ["src/data/stages/foundry-verification.json"],
       "sourceObjectIds": [],
       "notes": ""
     },
@@ -246,10 +202,7 @@
       "status": "PASS",
       "measuredValue": "3 floor choices with markers",
       "expected": ">=2 distinct paths",
-      "sourceFiles": [
-        "src/data/stages/foundry.json",
-        "src/data/stages/foundry-verification.json"
-      ],
+      "sourceFiles": ["src/data/stages/foundry.json", "src/data/stages/foundry-verification.json"],
       "sourceObjectIds": [],
       "notes": ""
     },
@@ -259,13 +212,8 @@
       "status": "PASS",
       "measuredValue": "maxFallSpeedY=130",
       "expected": "map property consumed by runtime",
-      "sourceFiles": [
-        "src/data/stages/foundry.json",
-        "src/scenes/FoundryScene.ts"
-      ],
-      "sourceObjectIds": [
-        "controlledDescent-lavafall"
-      ],
+      "sourceFiles": ["src/data/stages/foundry.json", "src/scenes/FoundryScene.ts"],
+      "sourceObjectIds": ["controlledDescent-lavafall"],
       "notes": ""
     },
     {
@@ -274,9 +222,7 @@
       "status": "PASS",
       "measuredValue": "foundryMechanics tests pass",
       "expected": "downward velocity capped, no upward launch",
-      "sourceFiles": [
-        "src/systems/foundryMechanics.test.ts"
-      ],
+      "sourceFiles": ["src/systems/foundryMechanics.test.ts"],
       "sourceObjectIds": [],
       "notes": ""
     },
@@ -286,9 +232,7 @@
       "status": "PASS",
       "measuredValue": "after setpiece before preboss",
       "expected": "correct beat ordering",
-      "sourceFiles": [
-        "src/data/stages/foundry-verification.json"
-      ],
+      "sourceFiles": ["src/data/stages/foundry-verification.json"],
       "sourceObjectIds": [],
       "notes": ""
     },
@@ -298,9 +242,7 @@
       "status": "PASS",
       "measuredValue": "heatVent+pistonCrusher+enemies after introductions",
       "expected": "no new hazards",
-      "sourceFiles": [
-        "src/data/stages/foundry-verification.json"
-      ],
+      "sourceFiles": ["src/data/stages/foundry-verification.json"],
       "sourceObjectIds": [],
       "notes": ""
     },
@@ -310,9 +252,7 @@
       "status": "PASS",
       "measuredValue": "all checked objects inside map bounds",
       "expected": "no out-of-bounds required objects",
-      "sourceFiles": [
-        "scripts/verify-foundry-stage.mjs"
-      ],
+      "sourceFiles": ["scripts/verify-foundry-stage.mjs"],
       "sourceObjectIds": [],
       "notes": ""
     },
@@ -322,9 +262,7 @@
       "status": "PASS",
       "measuredValue": "all route nodes checked",
       "expected": "no route node in solid",
-      "sourceFiles": [
-        "scripts/verify-foundry-stage.mjs"
-      ],
+      "sourceFiles": ["scripts/verify-foundry-stage.mjs"],
       "sourceObjectIds": [],
       "notes": ""
     },
@@ -334,12 +272,8 @@
       "status": "PASS",
       "measuredValue": "bossEntry marker connects after preboss",
       "expected": "reachable final marker to boss entry",
-      "sourceFiles": [
-        "src/data/stages/foundry.json"
-      ],
-      "sourceObjectIds": [
-        "foundry-bossEntry"
-      ],
+      "sourceFiles": ["src/data/stages/foundry.json"],
+      "sourceObjectIds": ["foundry-bossEntry"],
       "notes": ""
     },
     {
@@ -377,9 +311,7 @@
         }
       ],
       "expected": "npm ci, verify, typecheck, lint, format:check, test, build exit 0",
-      "sourceFiles": [
-        "scripts/review-m4.2.mjs"
-      ],
+      "sourceFiles": ["scripts/review-m4.2.mjs"],
       "sourceObjectIds": [],
       "notes": ""
     },
@@ -389,12 +321,8 @@
       "status": "MANUAL_REQUIRED",
       "measuredValue": null,
       "expected": "PO confirms on Android debug APK",
-      "sourceFiles": [
-        "docs/evidence/m4.2-android-checklist.md"
-      ],
-      "sourceObjectIds": [
-        "controlledDescent-lavafall"
-      ],
+      "sourceFiles": ["docs/evidence/m4.2-android-checklist.md"],
+      "sourceObjectIds": ["controlledDescent-lavafall"],
       "notes": "Camera/visual readability is not honestly proven by static geometry alone."
     },
     {
@@ -403,9 +331,7 @@
       "status": "MANUAL_REQUIRED",
       "measuredValue": null,
       "expected": "PO records device, tester, blind/practiced times",
-      "sourceFiles": [
-        "docs/evidence/m4.2-android-checklist.md"
-      ],
+      "sourceFiles": ["docs/evidence/m4.2-android-checklist.md"],
       "sourceObjectIds": [],
       "notes": "Codex did not perform physical Android testing."
     },
@@ -415,9 +341,7 @@
       "status": "MANUAL_REQUIRED",
       "measuredValue": null,
       "expected": "PO confirms two-cycle rhythm and open window on touch",
-      "sourceFiles": [
-        "docs/evidence/m4.2-android-checklist.md"
-      ],
+      "sourceFiles": ["docs/evidence/m4.2-android-checklist.md"],
       "sourceObjectIds": [],
       "notes": "Requires physical play feel."
     },
@@ -427,9 +351,7 @@
       "status": "MANUAL_REQUIRED",
       "measuredValue": null,
       "expected": "PO confirms no unreadable blind drop on device",
-      "sourceFiles": [
-        "docs/evidence/m4.2-android-checklist.md"
-      ],
+      "sourceFiles": ["docs/evidence/m4.2-android-checklist.md"],
       "sourceObjectIds": [],
       "notes": "Static verifier does not assert camera readability as PASS."
     }
