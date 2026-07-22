@@ -1358,6 +1358,20 @@ for (let col = POST_MIDBOSS_LANDING_COL_START; col <= POST_MIDBOSS_LANDING_COL_E
     grid[row][col] = FILL;
   }
 }
+entityObjects.push({
+  id: nextId(),
+  type: 'postMidbossLanding',
+  name: 'postMidboss-bridge-landing',
+  x: POST_MIDBOSS_LANDING_COL_START * TILE,
+  y: POST_MIDBOSS_LANDING_ROW * TILE,
+  width: (POST_MIDBOSS_LANDING_COL_END - POST_MIDBOSS_LANDING_COL_START + 1) * TILE,
+  height: TILE,
+  visible: true,
+  properties: [
+    { name: 'minWidthTiles', type: 'int', value: 8 },
+    { name: 'baseKitReachable', type: 'bool', value: true },
+  ],
+});
 
 const flatData = [];
 for (let r = 0; r < height; r += 1) for (let c = 0; c < width; c += 1) flatData.push(grid[r][c]);

@@ -9,7 +9,7 @@
   "tileheight": 16,
   "infinite": false,
   "nextlayerid": 7,
-  "nextobjectid": 74,
+  "nextobjectid": 75,
   "tilesets": [
     {
       "firstgid": 1,
@@ -3969,6 +3969,87 @@
       "name": "entities",
       "objects": [
         {
+          "id": 2,
+          "type": "checkpoint",
+          "name": "checkpoint-start",
+          "x": 24,
+          "y": 4208,
+          "width": 16,
+          "height": 16,
+          "visible": true,
+          "properties": [
+            {
+              "name": "order",
+              "type": "int",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": 15,
+          "type": "checkpoint",
+          "name": "checkpoint-post-midboss",
+          "x": 4040,
+          "y": 3824,
+          "width": 16,
+          "height": 16,
+          "visible": true,
+          "properties": [
+            {
+              "name": "order",
+              "type": "int",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "id": 40,
+          "type": "checkpoint",
+          "name": "checkpoint-post-setpiece",
+          "x": 3192,
+          "y": 2672,
+          "width": 16,
+          "height": 16,
+          "visible": true,
+          "properties": [
+            {
+              "name": "order",
+              "type": "int",
+              "value": 2
+            }
+          ]
+        },
+        {
+          "id": 59,
+          "type": "checkpoint",
+          "name": "checkpoint-preboss",
+          "x": 5176,
+          "y": 2992,
+          "width": 16,
+          "height": 16,
+          "visible": true,
+          "properties": [
+            {
+              "name": "order",
+              "type": "int",
+              "value": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "objectgroup",
+      "name": "hazards",
+      "objects": []
+    },
+    {
+      "id": 4,
+      "type": "objectgroup",
+      "name": "entities",
+      "objects": [
+        {
           "id": 1,
           "type": "playerSpawn",
           "name": "playerSpawn",
@@ -4931,6 +5012,46 @@
               "name": "pushY",
               "type": "int",
               "value": -150
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "objectgroup",
+      "name": "sections",
+      "objects": [
+        {
+          "id": 63,
+          "type": "section",
+          "name": "bossRoom",
+          "x": 5472,
+          "y": 2368,
+          "width": 416,
+          "height": 704,
+          "visible": true,
+          "properties": []
+        },
+        {
+          "id": 74,
+          "type": "postMidbossLanding",
+          "name": "postMidboss-bridge-landing",
+          "x": 4336,
+          "y": 3840,
+          "width": 240,
+          "height": 16,
+          "visible": true,
+          "properties": [
+            {
+              "name": "minWidthTiles",
+              "type": "int",
+              "value": 8
+            },
+            {
+              "name": "baseKitReachable",
+              "type": "bool",
+              "value": true
             }
           ]
         }
