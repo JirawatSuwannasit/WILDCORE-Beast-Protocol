@@ -2,6 +2,8 @@
 
 ## Terrain shape (anti-corridor)
 - [x] **Dominant axis:** vertical-dominant ascent / climb, matching GDD §3.3 Ember Foundry. It differs from Coral Reservoir's vertical descent by netting upward, using heat vents and a rising-lava chase as ascent pressure, and retaining a controlled lava-fall descent only as a counter-beat.
+- [x] **Traversal length:** 35 gameplay screens × 320 px route units = **11,200 px**, passing the 28-36 screen / 9,000-11,500 px target.
+- [x] **Timing evidence:** 35 screens at the GDD practice target band maps to ~2.5-3.5 minutes practiced; blind target remains 4-6 minutes due first-time branch choice, crusher timing, lava chase, and finalExam reading.
 - [x] **Vertical path target:** 18 vertical legs / 35 total legs = **51.43%**, passing the vertical-dominant target of ≥35%.
 - [x] **Beat-to-beat macro leg-direction list measured from Tiled section centers:** `RIGHT, UP, RIGHT, LEFT, UP, RIGHT, DOWN, RIGHT, RIGHT`. This replaces the rejected `[RIGHT x9]` corridor shape with a folded switchback spine.
 - [x] **Macro direction changes:** **7**, passing the ≥4 requirement.
@@ -51,9 +53,9 @@ Rows are raw generator tile rows before final Tiled row-margin offset; lower row
 | 35 | R | flat | 184 | 184 |
 
 - [x] **Structural elements present:** heat-vent / wall-kick ascent shaft on screens **5-6**, rising-lava forced ascent setpiece on screens **20-25**, controlled lava-fall descent on screens **29-30**, multi-floor forge hall on screens **14-15**.
-- [x] **Branch & rejoin:** screens **17-18**; upper catwalk/crusher route is faster and riskier with pickups/Heart Chip, lower pipe corridor is safer and slower, rejoining before the sheer drop.
+- [x] **Branch & rejoin:** fork screen **17**, upper start/end **17-18**, lower start/end **17-18**, rejoin screen **19**. Upper catwalk/crusher route is optional, faster, riskier, execution-heavier, and pays bonus pickups/Heart Chip; lower pipe corridor is slower, safer, base-kit viable, and has fewer hazards. Expected route-time delta: upper **18s**, lower **25s** (**7s** slower).
 - [x] **Rising lava placement:** `risingLava-chase` is inside the setpiece section box: setpiece `x=3056 y=2368 w=320 h=1600`; rising lava `x=3056 y=2688 w=320 h=960`.
-- [x] **Controlled descent marker:** `controlledDescent-lavafall` explicitly marks screens **29-30** with steerable descent, half-screen landing visibility, no blind hazard landing, and `slowfallPushY=-90` heat-vent behavior.
+- [x] **Controlled descent marker:** `controlledDescent-lavafall` explicitly marks screens **29-30** with steerable descent, half-screen landing visibility, no blind hazard landing, `slowfallPushY=-90` assist, and `maxFallSpeedY=130` controlled fall-speed cap.
 
 ## Content variety (anti-formula)
 - [x] **No consecutive identical enemy+hazard signatures:** 0 violations.
@@ -64,19 +66,20 @@ Rows are raw generator tile rows before final Tiled row-margin offset; lower row
 - [x] **No two hazard types introduced in the same room:** crusher debut is isolated from lava and the rising lava setpiece is introduced later in its own section.
 
 ## Fairness
-- [x] **Base-kit traversal:** maximum audited void gap is **3 tiles / 48 px**, within the no-dash base kit. Full-column empty-run audit: cols 148-151 is 3 tiles.
+- [x] **Base-kit traversal:** all route nodes are marked `baseKitTraversalValid=true`; maximum audited void gap is **3 tiles / 48 px**, within the no-dash base kit. Full-column empty-run audit: cols 148-151 is 3 tiles.
+- [x] **Solid boundaries / blind-drop audit:** generator validates object placement, crusher openings, boss-room entry, and route void gaps; controlled descent metadata marks visible landing, no blind hazard landing, safe recovery, no forced lava contact, and base-kit viability.
 - [x] **Gated secrets:** Ember Foundry keeps non-required pickups/secrets on readable side routes; no main-path progression requires a boss weapon or dash.
 - [x] **Playable boundaries:** generator placement validation passes for objects, crusher doorways, void gaps, and boss-room entry reachability; solid route blockers are generated from the same validated primitives.
 
 
 ## Machine-checkable evidence
-- [x] `src/data/stages/foundry-verification.json` records dominant axis, ordered route screens, movement directions, per-screen surface rows/variation, branch/fork/rejoin, structural ranges, beat assignments, signatures, gimmicks, gap widths, and checkpoint assignments.
+- [x] `src/data/stages/foundry-verification.json` records dominant axis, ordered route screens, exact ordered route nodes with world positions and segment kinds, movement directions, per-screen surface rows/variation, branch/fork/rejoin, structural ranges, beat assignments, signatures, gimmicks, gap widths, and checkpoint assignments.
 - [x] `src/data/stages/stageVerifier.ts` calculates and fails on the GDD §2.7 metrics, and `src/data/stages/foundryVerification.test.ts` runs it in Vitest.
 - [x] Hazards are intentionally verified from the `entities` layer and verification metadata; the empty `hazards` layer is documented in `DECISIONS.md` as reserved for future non-entity tile hazards.
 
 ## PO real-device test route (not claimed as completed by Codex)
 1. On an Android debug APK, start Ember Foundry from stage select with default touch controls.
 2. Reach the screen-17 fork once through the upper crusher catwalk and once through the lower pipe route; confirm neither route requires dash and both rejoin at screen 19.
-3. In the multi-floor forge hall, intentionally choose lower, middle, and upper layers before rejoining at screen 16.
-4. In the lava-fall descent on screens 29-30, commit to the drop only after the landing is visible, steer through the heat-vent slowfall, and confirm there is no blind landing onto lava, crusher, or enemy.
-5. Continue through finalExam and confirm the pre-boss checkpoint triggers before Magma Rhino.
+3. Verify crusher two-cycle timing and the Heart Chip branch, then in the multi-floor forge hall, intentionally choose lower, middle, and upper layers before rejoining at screen 16.
+4. Confirm the rising-lava chase can be cleared without dash, then in the lava-fall descent on screens 29-30, commit to the drop only after the landing is visible, steer through the heat-vent slowfall, and confirm there is no blind landing onto lava, crusher, or enemy.
+5. Collect/check the Cell Pack route, continue through finalExam and confirm the pre-boss checkpoint triggers before Magma Rhino.

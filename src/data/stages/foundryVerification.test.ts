@@ -40,6 +40,7 @@ describe('Ember Foundry §2.7 verification metadata', () => {
       visibleLandingHalfScreenBeforeCommitment: true,
       noBlindLandingOntoHazard: true,
       slowfallPushY: -90,
+      maxFallSpeedY: 130,
     });
     expect(foundry.structuralElements.multiFloorRoom.selectableFloors).toHaveLength(3);
   });

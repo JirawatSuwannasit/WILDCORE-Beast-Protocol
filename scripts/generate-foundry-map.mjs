@@ -1081,6 +1081,7 @@ addEntity(
     { name: 'visibleLandingHalfScreenBeforeCommitment', type: 'bool', value: true },
     { name: 'noBlindLandingOntoHazard', type: 'bool', value: true },
     { name: 'slowfallPushY', type: 'int', value: -90 },
+    { name: 'maxFallSpeedY', type: 'int', value: 130 },
   ],
 );
 tagGimmick(30, 'heatVent');

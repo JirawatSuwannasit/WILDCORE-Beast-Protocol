@@ -4074,7 +4074,8 @@
             { "name": "steerable", "type": "bool", "value": true },
             { "name": "visibleLandingHalfScreenBeforeCommitment", "type": "bool", "value": true },
             { "name": "noBlindLandingOntoHazard", "type": "bool", "value": true },
-            { "name": "slowfallPushY", "type": "int", "value": -90 }
+            { "name": "slowfallPushY", "type": "int", "value": -90 },
+            { "name": "maxFallSpeedY", "type": "int", "value": 130 }
           ]
         },
         {

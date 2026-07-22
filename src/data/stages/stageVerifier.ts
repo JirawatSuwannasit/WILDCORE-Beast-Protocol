@@ -12,6 +12,23 @@ export interface StageVerificationScreen {
   maxMandatoryGapTiles: number;
 }
 
+export interface StageRouteNode {
+  id: string;
+  sequenceIndex: number;
+  worldPosition: { x: number; y: number };
+  screenIndex: number;
+  beatName: string;
+  movementFromPrevious: Direction | 'START';
+  segmentKind: 'horizontal' | 'ascent' | 'descent' | 'branch' | 'rejoin' | 'arena' | 'transition';
+  requiredMovementAbility: 'baseKit';
+  baseKitTraversalValid: boolean;
+  activeEnemyTypes: string[];
+  activeHazardTypes: string[];
+  activeGimmicks: string[];
+  structuralElementName: string | null;
+  segmentLengthPx: number;
+}
+
 export interface StageVerificationData {
   dominantAxis: 'horizontal' | 'vertical' | 'mixed';
   screenPixelLength: number;
@@ -38,6 +55,7 @@ export interface StageVerificationData {
       noBlindLandingOntoHazard: boolean;
       slowfallHeatVents: string[];
       slowfallPushY: number;
+      maxFallSpeedY: number;
     };
     multiFloorRoom: {
       screens: number[];
@@ -49,6 +67,7 @@ export interface StageVerificationData {
   hazardIntroductions: Array<{ hazard: string; screen: number; beat: string }>;
   checkpoints: Array<{ id: string; order: number; screen: number }>;
   screens: StageVerificationScreen[];
+  routeNodes: StageRouteNode[];
 }
 
 export interface StageVerificationMetrics {
@@ -124,7 +143,7 @@ export function calculateStageVerificationMetrics(
 
   return {
     totalScreens: data.mainRouteScreenIds.length,
-    traversalPixels: data.mainRouteScreenIds.length * data.screenPixelLength,
+    traversalPixels: data.routeNodes.reduce((sum, node) => sum + node.segmentLengthPx, 0),
     verticalScreens,
     verticalPathPct: (verticalScreens / data.mainRouteScreenIds.length) * 100,
     macroDirectionChanges: countChanges(data.macroBeatDirections),
@@ -140,6 +159,14 @@ export function calculateStageVerificationMetrics(
 
 export function verifyFoundryStage(data: StageVerificationData): StageVerificationMetrics {
   const metrics = calculateStageVerificationMetrics(data);
+  const expectedRoute = data.mainRouteScreenIds;
+  if (data.routeNodes.length !== expectedRoute.length) throw new Error('route node count mismatch');
+  for (const [i, node] of data.routeNodes.entries()) {
+    if (node.sequenceIndex !== i + 1 || node.screenIndex !== expectedRoute[i]) {
+      throw new Error('route node ordering mismatch');
+    }
+    if (!node.baseKitTraversalValid) throw new Error(`route node ${node.id} is not base-kit valid`);
+  }
   if (data.dominantAxis !== 'vertical') throw new Error('Foundry must declare vertical axis');
   if (
     metrics.totalScreens < data.targetTraversalScreens.min ||
@@ -178,7 +205,9 @@ export function verifyFoundryStage(data: StageVerificationData): StageVerificati
     throw new Error('controlled descent blind hazard landing');
   }
   if (data.structuralElements.controlledDescent.slowfallPushY >= 0)
-    throw new Error('slowfall vent must lift');
+    throw new Error('slowfall assist must oppose falling');
+  if (data.structuralElements.controlledDescent.maxFallSpeedY <= 0)
+    throw new Error('controlled descent max fall speed must be positive');
   if (
     !data.structuralElements.multiFloorRoom.genuineLayerChoice ||
     data.structuralElements.multiFloorRoom.selectableFloors.length < 3
