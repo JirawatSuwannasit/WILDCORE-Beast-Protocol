@@ -11,6 +11,12 @@ const entities = objectLayers.entities ?? [];
 const checkpoints = objectLayers.checkpoints ?? [];
 const routeMarkers = objectLayers.routeMarkers ?? [];
 const sections = objectLayers.sections ?? [];
+const groundLayer = map.layers.find(
+  (layer) => layer.type === 'tilelayer' && layer.name === 'ground',
+);
+const tileAt = (col, row) => groundLayer?.data[row * map.width + col] ?? 0;
+const isTopTile = (col, row) => tileAt(col, row) === 2;
+
 const center = (object) => ({ x: object.x + object.width / 2, y: object.y + object.height / 2 });
 const property = (object, name) => object.properties?.find((item) => item.name === name)?.value;
 const routeNodeObjects = routeMarkers
@@ -162,6 +168,41 @@ assert(
   pickupObjects.length === data.screens.reduce((sum, screen) => sum + screen.pickups.length, 0),
   'pickup metadata/map count mismatch',
 );
+
+const postMidbossCheckpoint = checkpoints.find(
+  (object) => object.name === 'checkpoint-post-midboss',
+);
+assert(Boolean(groundLayer), 'ground tile layer missing');
+assert(Boolean(postMidbossCheckpoint), 'post-midboss checkpoint missing');
+if (groundLayer && postMidbossCheckpoint) {
+  const checkpointCol = Math.floor(center(postMidbossCheckpoint).x / map.tilewidth);
+  const checkpointFootRow = Math.floor(
+    (postMidbossCheckpoint.y + postMidbossCheckpoint.height) / map.tileheight,
+  );
+  const continuationCols = Array.from({ length: 15 }, (_, i) => checkpointCol + 18 + i);
+  const missingContinuationCols = continuationCols.filter(
+    (col) => !isTopTile(col, checkpointFootRow),
+  );
+  assert(
+    missingContinuationCols.length === 0,
+    `post-midboss transition landing missing at cols ${missingContinuationCols.join(',')}`,
+  );
+
+  const upperLandingCols = Array.from({ length: 8 }, (_, i) => checkpointCol + 11 + i);
+  const hasUpperLanding = upperLandingCols.some((col) => isTopTile(col, checkpointFootRow - 12));
+  assert(hasUpperLanding, 'post-midboss transition upper landing missing for base-kit ascent');
+
+  const transitionVent = entities.find(
+    (object) => object.name === 'heatVent-post-midboss-recovery',
+  );
+  assert(Boolean(transitionVent), 'post-midboss transition heat vent missing');
+  if (transitionVent) {
+    assert(
+      property(transitionVent, 'pushY') < 0,
+      'post-midboss transition heat vent must assist upward movement',
+    );
+  }
+}
 
 console.log(
   'Pickup objects:',

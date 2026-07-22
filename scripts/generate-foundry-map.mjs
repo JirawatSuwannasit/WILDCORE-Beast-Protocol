@@ -1242,6 +1242,47 @@ for (const s of segments.slice(1)) {
   s.colEnd = Math.max(a, b);
 }
 for (const d of crusherDoorways) d.col = Math.min(transformCol(d.col), transformCol(d.col + 1));
+
+// Android P0 regression: after the macro-band switchback transform, the
+// post-midboss checkpoint lands at the right edge of the midboss arena. The
+// next remix/multi-floor route climbs back above it, so the arena must expose
+// an actual, visible base-kit continuation instead of ending in a death void.
+// Build this in final/transformed tile coordinates so the generated Tiled map
+// and runtime collision agree exactly with the Android-observed screen 13→14
+// handoff.
+const postMidbossTransition = {
+  floorStartCol: segments[13].colEnd - 1,
+  floorEndCol: segments[13].colEnd + 20,
+  floorRow: segments[13].row,
+};
+fillFloor(
+  postMidbossTransition.floorStartCol,
+  postMidbossTransition.floorEndCol,
+  postMidbossTransition.floorRow,
+  FILL_DEPTH,
+);
+fillLedge(
+  postMidbossTransition.floorStartCol + 7,
+  postMidbossTransition.floorStartCol + 16,
+  postMidbossTransition.floorRow - 6,
+);
+fillLedge(
+  postMidbossTransition.floorStartCol + 2,
+  postMidbossTransition.floorStartCol + 12,
+  postMidbossTransition.floorRow - 12,
+);
+addHeatVent(
+  'heatVent-post-midboss-recovery',
+  {
+    left: postMidbossTransition.floorStartCol + 8,
+    right: postMidbossTransition.floorStartCol + 8 + SAFE_GAP_TILES,
+  },
+  postMidbossTransition.floorRow - 12,
+  postMidbossTransition.floorRow,
+  -150,
+);
+tagGimmick(14, 'heatVent');
+
 for (let c = transformCol(bossRoomColStart); c <= transformCol(bossRoomColStart) + 1; c += 1) {
   for (let r = bossRoomRow - 3; r < bossRoomRow; r += 1) cells.delete(`${r},${c}`);
 }
@@ -1301,6 +1342,18 @@ shiftObjects(sectionObjects);
 const flatData = [];
 for (let r = 0; r < height; r += 1) for (let c = 0; c < width; c += 1) flatData.push(grid[r][c]);
 
+const existingFoundryMapPath = 'src/data/stages/foundry.json';
+let preservedRouteMarkers = [];
+try {
+  const existingMap = JSON.parse(fs.readFileSync(existingFoundryMapPath, 'utf8'));
+  preservedRouteMarkers =
+    existingMap.layers.find(
+      (layer) => layer.type === 'objectgroup' && layer.name === 'routeMarkers',
+    )?.objects ?? [];
+} catch {
+  preservedRouteMarkers = [];
+}
+
 const map = {
   type: 'map',
   orientation: 'orthogonal',
@@ -1311,7 +1364,7 @@ const map = {
   tilewidth: TILE,
   tileheight: TILE,
   infinite: false,
-  nextlayerid: 6,
+  nextlayerid: preservedRouteMarkers.length > 0 ? 7 : 6,
   nextobjectid: objectId,
   tilesets: [
     {
@@ -1345,6 +1398,9 @@ const map = {
     { id: 3, type: 'objectgroup', name: 'hazards', objects: [] },
     { id: 4, type: 'objectgroup', name: 'entities', objects: entityObjects },
     { id: 5, type: 'objectgroup', name: 'sections', objects: sectionObjects },
+    ...(preservedRouteMarkers.length > 0
+      ? [{ id: 6, type: 'objectgroup', name: 'routeMarkers', objects: preservedRouteMarkers }]
+      : []),
   ],
 };
 

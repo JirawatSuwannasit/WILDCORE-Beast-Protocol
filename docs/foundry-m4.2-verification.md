@@ -56,6 +56,7 @@ Rows are raw generator tile rows before final Tiled row-margin offset; lower row
 - [x] **Branch & rejoin:** fork screen **17**, upper start/end **17-18**, lower start/end **17-18**, rejoin screen **19**. Upper catwalk/crusher route is optional, faster, riskier, execution-heavier, and pays bonus pickups/Heart Chip; lower pipe corridor is slower, safer, base-kit viable, and has fewer hazards. Expected route-time delta: upper **18s**, lower **25s** (**7s** slower).
 - [x] **Rising lava placement:** `risingLava-chase` is inside the setpiece section box: setpiece `x=3056 y=2368 w=320 h=1600`; rising lava `x=3056 y=2688 w=320 h=960`.
 - [x] **Controlled descent marker:** `controlledDescent-lavafall` explicitly marks screens **29-30** with steerable descent, half-screen landing visibility, no blind hazard landing, `slowfallPushY=-90` assist, and `maxFallSpeedY=130` controlled fall-speed cap.
+- [x] **Post-midboss screen 13→14 continuation:** Android blocker fix adds a visible supported landing run after `checkpoint-post-midboss` at tile row **240**, columns **271-285**, plus an upper recovery landing at row **228** and `heatVent-post-midboss-recovery` so the player can leave the midboss arena using the base kit instead of falling into the previous death void.
 
 ## Content variety (anti-formula)
 - [x] **No consecutive identical enemy+hazard signatures:** 0 violations.
@@ -67,6 +68,7 @@ Rows are raw generator tile rows before final Tiled row-margin offset; lower row
 
 ## Fairness
 - [x] **Base-kit traversal:** all route nodes are marked `baseKitTraversalValid=true`; maximum audited void gap is **3 tiles / 48 px**, within the no-dash base kit. Full-column empty-run audit: cols 148-151 is 3 tiles.
+- [x] **Post-midboss transition regression:** `npm run verify:foundry` now checks that the post-midboss checkpoint has collision-supported continuation tiles ahead, an upper base-kit recovery landing, and an upward assist vent; Vitest mutates those landing tiles away and asserts the exact failure reason.
 - [x] **Solid boundaries / blind-drop audit:** generator validates object placement, crusher openings, boss-room entry, and route void gaps; controlled descent metadata marks visible landing, no blind hazard landing, safe recovery, no forced lava contact, and base-kit viability.
 - [x] **Gated secrets:** Ember Foundry keeps non-required pickups/secrets on readable side routes; no main-path progression requires a boss weapon or dash.
 - [x] **Playable boundaries:** generator placement validation passes for objects, crusher doorways, void gaps, and boss-room entry reachability; solid route blockers are generated from the same validated primitives.
