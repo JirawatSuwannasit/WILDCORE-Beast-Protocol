@@ -1,0 +1,704 @@
+{
+  "stageId": "foundry",
+  "dominantAxis": "vertical",
+  "screenPixelLength": 320,
+  "targetTraversalScreens": {
+    "min": 28,
+    "max": 36
+  },
+  "targetTraversalPixels": {
+    "min": 9000,
+    "max": 11500
+  },
+  "verticalPathTargetPct": 35,
+  "mainRouteScreenIds": [
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
+    27, 28, 29, 30, 31, 32, 33, 34, 35
+  ],
+  "macroBeatDirections": ["RIGHT", "UP", "RIGHT", "LEFT", "UP", "RIGHT", "DOWN", "RIGHT", "RIGHT"],
+  "branch": {
+    "forkScreen": 17,
+    "upperRouteScreens": [17, 18],
+    "lowerRouteScreens": [17, 18],
+    "rejoinScreen": 19,
+    "upperRoute": "faster crusher-heavy catwalk with bonus pickups and Heart Chip",
+    "lowerRoute": "slower safer pipe route with fewer hazards",
+    "connectedToMainRoute": true,
+    "requiresDash": false
+  },
+  "structuralElements": {
+    "ascentShaft": {
+      "screens": [5, 6],
+      "verticalCamera": true,
+      "heatVentAssisted": true
+    },
+    "controlledDescent": {
+      "screens": [29, 30],
+      "zoneMarker": "controlledDescent-lavafall",
+      "steerable": true,
+      "visibleLandingHalfScreenBeforeCommitment": true,
+      "noBlindLandingOntoHazard": true,
+      "slowfallHeatVents": ["heatVent-lavafall-1", "heatVent-lavafall-2"],
+      "slowfallPushY": -90
+    },
+    "multiFloorRoom": {
+      "screens": [14, 15],
+      "selectableFloors": ["lower-pipe-floor", "middle-piston-floor", "upper-pickup-catwalk"],
+      "rejoinScreen": 16,
+      "genuineLayerChoice": true
+    }
+  },
+  "hazardLayerDecision": "Hazards intentionally live in the entities layer so their constructors can share entity spawning, object properties, and validation; the hazards object layer is reserved for future non-entity tile hazards.",
+  "hazardIntroductions": [
+    {
+      "hazard": "heatVent",
+      "screen": 5,
+      "beat": "tutorial"
+    },
+    {
+      "hazard": "pistonCrusher",
+      "screen": 10,
+      "beat": "escalation"
+    },
+    {
+      "hazard": "risingLava",
+      "screen": 20,
+      "beat": "setpiece"
+    }
+  ],
+  "gatedSecrets": [
+    {
+      "id": "heartChip-branch",
+      "screen": 17,
+      "readableHint": "visible above crusher catwalk",
+      "requiresGate": false,
+      "requiresDash": false
+    },
+    {
+      "id": "cellPack-1",
+      "screen": 27,
+      "readableHint": "visible side alcove over heat vent",
+      "requiresGate": false,
+      "requiresDash": false
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "checkpoint-start",
+      "order": 0,
+      "screen": 1
+    },
+    {
+      "id": "checkpoint-post-midboss",
+      "order": 1,
+      "screen": 13
+    },
+    {
+      "id": "checkpoint-post-setpiece",
+      "order": 2,
+      "screen": 25
+    },
+    {
+      "id": "checkpoint-preboss",
+      "order": 3,
+      "screen": 35
+    }
+  ],
+  "screens": [
+    {
+      "id": 1,
+      "beat": "intro",
+      "movement": "R",
+      "motif": "flat",
+      "surfaceHeight": {
+        "enterRow": 260,
+        "exitRow": 260,
+        "verticalVariationRows": 0
+      },
+      "encounters": ["slagBlob"],
+      "hazards": [],
+      "signature": "slagBlob|",
+      "gimmicks": [],
+      "pickups": [],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 2,
+      "beat": "intro",
+      "movement": "R",
+      "motif": "flat",
+      "surfaceHeight": {
+        "enterRow": 260,
+        "exitRow": 260,
+        "verticalVariationRows": 0
+      },
+      "encounters": [],
+      "hazards": [],
+      "signature": "|",
+      "gimmicks": [],
+      "pickups": [],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 3,
+      "beat": "intro",
+      "movement": "D",
+      "motif": "dip",
+      "surfaceHeight": {
+        "enterRow": 260,
+        "exitRow": 266,
+        "verticalVariationRows": 6
+      },
+      "encounters": [],
+      "hazards": [],
+      "signature": "|",
+      "gimmicks": [],
+      "pickups": [],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 4,
+      "beat": "tutorial",
+      "movement": "R",
+      "motif": "flat",
+      "surfaceHeight": {
+        "enterRow": 266,
+        "exitRow": 266,
+        "verticalVariationRows": 0
+      },
+      "encounters": ["slagBlob"],
+      "hazards": [],
+      "signature": "slagBlob|",
+      "gimmicks": [],
+      "pickups": [],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 5,
+      "beat": "tutorial",
+      "movement": "U",
+      "motif": "ventShaft",
+      "surfaceHeight": {
+        "enterRow": 266,
+        "exitRow": 254,
+        "verticalVariationRows": 12
+      },
+      "encounters": [],
+      "hazards": ["heatVent"],
+      "signature": "|heatVent",
+      "gimmicks": ["heatVent"],
+      "pickups": [],
+      "maxMandatoryGapTiles": 3
+    },
+    {
+      "id": 6,
+      "beat": "tutorial",
+      "movement": "U",
+      "motif": "shaft",
+      "surfaceHeight": {
+        "enterRow": 254,
+        "exitRow": 242,
+        "verticalVariationRows": 12
+      },
+      "encounters": [],
+      "hazards": [],
+      "signature": "|",
+      "gimmicks": [],
+      "pickups": ["energyPickup"],
+      "maxMandatoryGapTiles": 3
+    },
+    {
+      "id": 7,
+      "beat": "tutorial",
+      "movement": "R",
+      "motif": "flat",
+      "surfaceHeight": {
+        "enterRow": 242,
+        "exitRow": 242,
+        "verticalVariationRows": 0
+      },
+      "encounters": [],
+      "hazards": [],
+      "signature": "|",
+      "gimmicks": [],
+      "pickups": [],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 8,
+      "beat": "escalation",
+      "movement": "R",
+      "motif": "flat",
+      "surfaceHeight": {
+        "enterRow": 242,
+        "exitRow": 242,
+        "verticalVariationRows": 0
+      },
+      "encounters": ["slagBlob"],
+      "hazards": [],
+      "signature": "slagBlob|",
+      "gimmicks": [],
+      "pickups": [],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 9,
+      "beat": "escalation",
+      "movement": "U",
+      "motif": "ventShaft",
+      "surfaceHeight": {
+        "enterRow": 242,
+        "exitRow": 230,
+        "verticalVariationRows": 12
+      },
+      "encounters": ["emberBat"],
+      "hazards": ["heatVent"],
+      "signature": "emberBat|heatVent",
+      "gimmicks": ["heatVent"],
+      "pickups": [],
+      "maxMandatoryGapTiles": 3
+    },
+    {
+      "id": 10,
+      "beat": "escalation",
+      "movement": "R",
+      "motif": "crusherDoorway",
+      "surfaceHeight": {
+        "enterRow": 230,
+        "exitRow": 230,
+        "verticalVariationRows": 0
+      },
+      "encounters": [],
+      "hazards": ["pistonCrusher"],
+      "signature": "|pistonCrusher",
+      "gimmicks": ["pistonCrusher"],
+      "pickups": [],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 11,
+      "beat": "escalation",
+      "movement": "D",
+      "motif": "dip",
+      "surfaceHeight": {
+        "enterRow": 230,
+        "exitRow": 236,
+        "verticalVariationRows": 6
+      },
+      "encounters": ["slagBlob"],
+      "hazards": [],
+      "signature": "slagBlob|",
+      "gimmicks": [],
+      "pickups": [],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 12,
+      "beat": "escalation",
+      "movement": "R",
+      "motif": "flat",
+      "surfaceHeight": {
+        "enterRow": 236,
+        "exitRow": 236,
+        "verticalVariationRows": 0
+      },
+      "encounters": ["emberBat"],
+      "hazards": [],
+      "signature": "emberBat|",
+      "gimmicks": [],
+      "pickups": [],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 13,
+      "beat": "midboss",
+      "movement": "R",
+      "motif": "arena",
+      "surfaceHeight": {
+        "enterRow": 236,
+        "exitRow": 236,
+        "verticalVariationRows": 0
+      },
+      "encounters": ["slagGolem"],
+      "hazards": [],
+      "signature": "slagGolem|",
+      "gimmicks": [],
+      "pickups": [],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 14,
+      "beat": "remix",
+      "movement": "U",
+      "motif": "multiFloor",
+      "surfaceHeight": {
+        "enterRow": 236,
+        "exitRow": 224,
+        "verticalVariationRows": 12
+      },
+      "encounters": [],
+      "hazards": ["heatVent", "pistonCrusher"],
+      "signature": "|heatVent+pistonCrusher",
+      "gimmicks": ["heatVent", "pistonCrusher"],
+      "pickups": [],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 15,
+      "beat": "remix",
+      "movement": "U",
+      "motif": "multiFloor",
+      "surfaceHeight": {
+        "enterRow": 224,
+        "exitRow": 212,
+        "verticalVariationRows": 12
+      },
+      "encounters": [],
+      "hazards": ["heatVent", "pistonCrusher"],
+      "signature": "|heatVent+pistonCrusherTop",
+      "gimmicks": ["heatVent", "pistonCrusher"],
+      "pickups": [],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 16,
+      "beat": "remix",
+      "movement": "R",
+      "motif": "flat",
+      "surfaceHeight": {
+        "enterRow": 212,
+        "exitRow": 212,
+        "verticalVariationRows": 0
+      },
+      "encounters": ["emberBat"],
+      "hazards": [],
+      "signature": "emberBat|",
+      "gimmicks": [],
+      "pickups": ["energyPickup"],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 17,
+      "beat": "remix",
+      "movement": "R",
+      "motif": "branch",
+      "surfaceHeight": {
+        "enterRow": 212,
+        "exitRow": 212,
+        "verticalVariationRows": 0
+      },
+      "encounters": ["emberBat"],
+      "hazards": ["pistonCrusher"],
+      "signature": "emberBat|pistonCrusher",
+      "gimmicks": ["pistonCrusher"],
+      "pickups": ["energyPickup", "heartChip"],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 18,
+      "beat": "remix",
+      "movement": "R",
+      "motif": "branch",
+      "surfaceHeight": {
+        "enterRow": 212,
+        "exitRow": 212,
+        "verticalVariationRows": 0
+      },
+      "encounters": ["slagBlob"],
+      "hazards": ["pistonCrusher"],
+      "signature": "slagBlob|pistonCrusher",
+      "gimmicks": ["pistonCrusher"],
+      "pickups": ["energyPickup"],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 19,
+      "beat": "remix",
+      "movement": "D",
+      "motif": "sheer",
+      "surfaceHeight": {
+        "enterRow": 212,
+        "exitRow": 224,
+        "verticalVariationRows": 12
+      },
+      "encounters": ["emberBat"],
+      "hazards": [],
+      "signature": "emberBat|",
+      "gimmicks": [],
+      "pickups": [],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 20,
+      "beat": "setpiece",
+      "movement": "U",
+      "motif": "lavaChase",
+      "surfaceHeight": {
+        "enterRow": 224,
+        "exitRow": 212,
+        "verticalVariationRows": 12
+      },
+      "encounters": ["emberBat"],
+      "hazards": ["heatVent", "risingLava"],
+      "signature": "emberBat|heatVent+risingLava",
+      "gimmicks": ["heatVent", "risingLava"],
+      "pickups": [],
+      "maxMandatoryGapTiles": 3
+    },
+    {
+      "id": 21,
+      "beat": "setpiece",
+      "movement": "U",
+      "motif": "lavaChase",
+      "surfaceHeight": {
+        "enterRow": 212,
+        "exitRow": 200,
+        "verticalVariationRows": 12
+      },
+      "encounters": [],
+      "hazards": ["heatVent", "risingLava"],
+      "signature": "|heatVent+risingLava",
+      "gimmicks": ["heatVent", "risingLava"],
+      "pickups": [],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 22,
+      "beat": "setpiece",
+      "movement": "U",
+      "motif": "lavaChase",
+      "surfaceHeight": {
+        "enterRow": 200,
+        "exitRow": 188,
+        "verticalVariationRows": 12
+      },
+      "encounters": [],
+      "hazards": ["risingLava"],
+      "signature": "|risingLava",
+      "gimmicks": ["risingLava"],
+      "pickups": [],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 23,
+      "beat": "setpiece",
+      "movement": "R",
+      "motif": "lavaChaseLedge",
+      "surfaceHeight": {
+        "enterRow": 188,
+        "exitRow": 188,
+        "verticalVariationRows": 0
+      },
+      "encounters": [],
+      "hazards": ["risingLava"],
+      "signature": "|risingLava+ledgePressure",
+      "gimmicks": ["risingLava"],
+      "pickups": [],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 24,
+      "beat": "setpiece",
+      "movement": "U",
+      "motif": "lavaChase",
+      "surfaceHeight": {
+        "enterRow": 188,
+        "exitRow": 176,
+        "verticalVariationRows": 12
+      },
+      "encounters": [],
+      "hazards": ["heatVent", "risingLava"],
+      "signature": "|heatVent+risingLava",
+      "gimmicks": ["heatVent", "risingLava"],
+      "pickups": [],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 25,
+      "beat": "setpiece",
+      "movement": "U",
+      "motif": "lavaChase",
+      "surfaceHeight": {
+        "enterRow": 176,
+        "exitRow": 164,
+        "verticalVariationRows": 12
+      },
+      "encounters": [],
+      "hazards": ["risingLava"],
+      "signature": "|risingLava",
+      "gimmicks": ["risingLava"],
+      "pickups": [],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 26,
+      "beat": "breather",
+      "movement": "R",
+      "motif": "flat",
+      "surfaceHeight": {
+        "enterRow": 164,
+        "exitRow": 164,
+        "verticalVariationRows": 0
+      },
+      "encounters": ["slagBlob"],
+      "hazards": [],
+      "signature": "slagBlob|",
+      "gimmicks": [],
+      "pickups": [],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 27,
+      "beat": "breather",
+      "movement": "D",
+      "motif": "dip",
+      "surfaceHeight": {
+        "enterRow": 164,
+        "exitRow": 168,
+        "verticalVariationRows": 4
+      },
+      "encounters": [],
+      "hazards": [],
+      "signature": "|",
+      "gimmicks": [],
+      "pickups": ["cellPack"],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 28,
+      "beat": "breather",
+      "movement": "R",
+      "motif": "flat",
+      "surfaceHeight": {
+        "enterRow": 168,
+        "exitRow": 168,
+        "verticalVariationRows": 0
+      },
+      "encounters": ["slagBlob"],
+      "hazards": [],
+      "signature": "slagBlob|",
+      "gimmicks": [],
+      "pickups": ["energyPickup"],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 29,
+      "beat": "finalExam",
+      "movement": "D",
+      "motif": "lavafallDescent",
+      "surfaceHeight": {
+        "enterRow": 168,
+        "exitRow": 180,
+        "verticalVariationRows": 12
+      },
+      "encounters": ["emberBat"],
+      "hazards": ["heatVent"],
+      "signature": "emberBat|heatVent",
+      "gimmicks": ["heatVent"],
+      "pickups": [],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 30,
+      "beat": "finalExam",
+      "movement": "D",
+      "motif": "lavafallDescent",
+      "surfaceHeight": {
+        "enterRow": 180,
+        "exitRow": 192,
+        "verticalVariationRows": 12
+      },
+      "encounters": [],
+      "hazards": ["heatVent"],
+      "signature": "|heatVent",
+      "gimmicks": ["heatVent"],
+      "pickups": [],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 31,
+      "beat": "finalExam",
+      "movement": "R",
+      "motif": "flat",
+      "surfaceHeight": {
+        "enterRow": 192,
+        "exitRow": 192,
+        "verticalVariationRows": 0
+      },
+      "encounters": ["slagBlob", "emberBat"],
+      "hazards": [],
+      "signature": "slagBlob+emberBat|",
+      "gimmicks": [],
+      "pickups": [],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 32,
+      "beat": "finalExam",
+      "movement": "U",
+      "motif": "ventShaft",
+      "surfaceHeight": {
+        "enterRow": 192,
+        "exitRow": 180,
+        "verticalVariationRows": 12
+      },
+      "encounters": [],
+      "hazards": ["heatVent"],
+      "signature": "|heatVent",
+      "gimmicks": ["heatVent"],
+      "pickups": [],
+      "maxMandatoryGapTiles": 3
+    },
+    {
+      "id": 33,
+      "beat": "finalExam",
+      "movement": "R",
+      "motif": "crusherDoorway",
+      "surfaceHeight": {
+        "enterRow": 180,
+        "exitRow": 180,
+        "verticalVariationRows": 0
+      },
+      "encounters": ["emberBat"],
+      "hazards": ["pistonCrusher"],
+      "signature": "emberBat|pistonCrusher",
+      "gimmicks": ["pistonCrusher"],
+      "pickups": [],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 34,
+      "beat": "preboss",
+      "movement": "D",
+      "motif": "dip",
+      "surfaceHeight": {
+        "enterRow": 180,
+        "exitRow": 184,
+        "verticalVariationRows": 4
+      },
+      "encounters": [],
+      "hazards": [],
+      "signature": "|",
+      "gimmicks": [],
+      "pickups": ["energyPickup"],
+      "maxMandatoryGapTiles": 0
+    },
+    {
+      "id": 35,
+      "beat": "preboss",
+      "movement": "R",
+      "motif": "flat",
+      "surfaceHeight": {
+        "enterRow": 184,
+        "exitRow": 184,
+        "verticalVariationRows": 0
+      },
+      "encounters": [],
+      "hazards": [],
+      "signature": "|",
+      "gimmicks": [],
+      "pickups": ["energyPickup"],
+      "maxMandatoryGapTiles": 0
+    }
+  ]
+}
