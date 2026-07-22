@@ -378,7 +378,7 @@
       "hazards": [],
       "signature": "emberBat|",
       "gimmicks": [],
-      "pickups": ["energyPickup"],
+      "pickups": ["energyPickup", "energyPickup"],
       "maxMandatoryGapTiles": 0
     },
     {
@@ -548,7 +548,7 @@
       "hazards": [],
       "signature": "slagBlob|",
       "gimmicks": [],
-      "pickups": [],
+      "pickups": ["energyPickup"],
       "maxMandatoryGapTiles": 0
     },
     {
@@ -707,30 +707,47 @@
   ],
   "routeNodes": [
     {
-      "id": "foundry-route-01",
-      "sequenceIndex": 1,
+      "id": "foundry-route-start",
+      "sequenceIndex": 0,
       "worldPosition": {
         "x": 160,
-        "y": 4160
+        "y": 4208
       },
       "screenIndex": 1,
       "beatName": "intro",
       "movementFromPrevious": "START",
+      "segmentKind": "transition",
+      "requiredMovementAbility": "baseKit",
+      "baseKitTraversalValid": true,
+      "activeEnemyTypes": [],
+      "activeHazardTypes": [],
+      "activeGimmicks": [],
+      "structuralElementName": null
+    },
+    {
+      "id": "foundry-route-01",
+      "sequenceIndex": 1,
+      "worldPosition": {
+        "x": 480,
+        "y": 4208
+      },
+      "screenIndex": 1,
+      "beatName": "intro",
+      "movementFromPrevious": "R",
       "segmentKind": "horizontal",
       "requiredMovementAbility": "baseKit",
       "baseKitTraversalValid": true,
       "activeEnemyTypes": ["slagBlob"],
       "activeHazardTypes": [],
       "activeGimmicks": [],
-      "structuralElementName": null,
-      "segmentLengthPx": 320
+      "structuralElementName": null
     },
     {
       "id": "foundry-route-02",
       "sequenceIndex": 2,
       "worldPosition": {
-        "x": 480,
-        "y": 4160
+        "x": 800,
+        "y": 4208
       },
       "screenIndex": 2,
       "beatName": "intro",
@@ -741,15 +758,14 @@
       "activeEnemyTypes": [],
       "activeHazardTypes": [],
       "activeGimmicks": [],
-      "structuralElementName": null,
-      "segmentLengthPx": 320
+      "structuralElementName": null
     },
     {
       "id": "foundry-route-03",
       "sequenceIndex": 3,
       "worldPosition": {
         "x": 800,
-        "y": 4256
+        "y": 4528
       },
       "screenIndex": 3,
       "beatName": "intro",
@@ -760,15 +776,14 @@
       "activeEnemyTypes": [],
       "activeHazardTypes": [],
       "activeGimmicks": [],
-      "structuralElementName": null,
-      "segmentLengthPx": 320
+      "structuralElementName": null
     },
     {
       "id": "foundry-route-04",
       "sequenceIndex": 4,
       "worldPosition": {
         "x": 1120,
-        "y": 4256
+        "y": 4528
       },
       "screenIndex": 4,
       "beatName": "tutorial",
@@ -779,15 +794,14 @@
       "activeEnemyTypes": ["slagBlob"],
       "activeHazardTypes": [],
       "activeGimmicks": [],
-      "structuralElementName": null,
-      "segmentLengthPx": 320
+      "structuralElementName": null
     },
     {
       "id": "foundry-route-05",
       "sequenceIndex": 5,
       "worldPosition": {
-        "x": 1440,
-        "y": 4064
+        "x": 1120,
+        "y": 4208
       },
       "screenIndex": 5,
       "beatName": "tutorial",
@@ -798,15 +812,14 @@
       "activeEnemyTypes": [],
       "activeHazardTypes": ["heatVent"],
       "activeGimmicks": ["heatVent"],
-      "structuralElementName": "ascentShaft",
-      "segmentLengthPx": 320
+      "structuralElementName": "ascentShaft"
     },
     {
       "id": "foundry-route-06",
       "sequenceIndex": 6,
       "worldPosition": {
-        "x": 1760,
-        "y": 3872
+        "x": 1120,
+        "y": 3888
       },
       "screenIndex": 6,
       "beatName": "tutorial",
@@ -817,15 +830,14 @@
       "activeEnemyTypes": [],
       "activeHazardTypes": [],
       "activeGimmicks": [],
-      "structuralElementName": "ascentShaft",
-      "segmentLengthPx": 320
+      "structuralElementName": "ascentShaft"
     },
     {
       "id": "foundry-route-07",
       "sequenceIndex": 7,
       "worldPosition": {
-        "x": 2080,
-        "y": 3872
+        "x": 1440,
+        "y": 3888
       },
       "screenIndex": 7,
       "beatName": "tutorial",
@@ -836,15 +848,14 @@
       "activeEnemyTypes": [],
       "activeHazardTypes": [],
       "activeGimmicks": [],
-      "structuralElementName": null,
-      "segmentLengthPx": 320
+      "structuralElementName": null
     },
     {
       "id": "foundry-route-08",
       "sequenceIndex": 8,
       "worldPosition": {
-        "x": 1024,
-        "y": 3872
+        "x": 1760,
+        "y": 3888
       },
       "screenIndex": 8,
       "beatName": "escalation",
@@ -855,15 +866,14 @@
       "activeEnemyTypes": ["slagBlob"],
       "activeHazardTypes": [],
       "activeGimmicks": [],
-      "structuralElementName": null,
-      "segmentLengthPx": 320
+      "structuralElementName": null
     },
     {
       "id": "foundry-route-09",
       "sequenceIndex": 9,
       "worldPosition": {
-        "x": 1344,
-        "y": 3680
+        "x": 1760,
+        "y": 3568
       },
       "screenIndex": 9,
       "beatName": "escalation",
@@ -874,15 +884,14 @@
       "activeEnemyTypes": ["emberBat"],
       "activeHazardTypes": ["heatVent"],
       "activeGimmicks": ["heatVent"],
-      "structuralElementName": null,
-      "segmentLengthPx": 320
+      "structuralElementName": null
     },
     {
       "id": "foundry-route-10",
       "sequenceIndex": 10,
       "worldPosition": {
-        "x": 1664,
-        "y": 3680
+        "x": 2080,
+        "y": 3568
       },
       "screenIndex": 10,
       "beatName": "escalation",
@@ -893,15 +902,14 @@
       "activeEnemyTypes": [],
       "activeHazardTypes": ["pistonCrusher"],
       "activeGimmicks": ["pistonCrusher"],
-      "structuralElementName": null,
-      "segmentLengthPx": 320
+      "structuralElementName": null
     },
     {
       "id": "foundry-route-11",
       "sequenceIndex": 11,
       "worldPosition": {
-        "x": 1984,
-        "y": 3776
+        "x": 2080,
+        "y": 3888
       },
       "screenIndex": 11,
       "beatName": "escalation",
@@ -912,15 +920,14 @@
       "activeEnemyTypes": ["slagBlob"],
       "activeHazardTypes": [],
       "activeGimmicks": [],
-      "structuralElementName": null,
-      "segmentLengthPx": 320
+      "structuralElementName": null
     },
     {
       "id": "foundry-route-12",
       "sequenceIndex": 12,
       "worldPosition": {
-        "x": 2304,
-        "y": 3776
+        "x": 2400,
+        "y": 3888
       },
       "screenIndex": 12,
       "beatName": "escalation",
@@ -931,15 +938,14 @@
       "activeEnemyTypes": ["emberBat"],
       "activeHazardTypes": [],
       "activeGimmicks": [],
-      "structuralElementName": null,
-      "segmentLengthPx": 320
+      "structuralElementName": null
     },
     {
       "id": "foundry-route-13",
       "sequenceIndex": 13,
       "worldPosition": {
-        "x": 4192,
-        "y": 3776
+        "x": 2720,
+        "y": 3888
       },
       "screenIndex": 13,
       "beatName": "midboss",
@@ -950,15 +956,14 @@
       "activeEnemyTypes": ["slagGolem"],
       "activeHazardTypes": [],
       "activeGimmicks": [],
-      "structuralElementName": null,
-      "segmentLengthPx": 320
+      "structuralElementName": null
     },
     {
       "id": "foundry-route-14",
       "sequenceIndex": 14,
       "worldPosition": {
-        "x": 3952,
-        "y": 3584
+        "x": 2720,
+        "y": 3568
       },
       "screenIndex": 14,
       "beatName": "remix",
@@ -969,15 +974,14 @@
       "activeEnemyTypes": [],
       "activeHazardTypes": ["heatVent", "pistonCrusher"],
       "activeGimmicks": ["heatVent", "pistonCrusher"],
-      "structuralElementName": "multiFloorRoom",
-      "segmentLengthPx": 320
+      "structuralElementName": "multiFloorRoom"
     },
     {
       "id": "foundry-route-15",
       "sequenceIndex": 15,
       "worldPosition": {
-        "x": 3632,
-        "y": 3392
+        "x": 2720,
+        "y": 3248
       },
       "screenIndex": 15,
       "beatName": "remix",
@@ -985,18 +989,17 @@
       "segmentKind": "ascent",
       "requiredMovementAbility": "baseKit",
       "baseKitTraversalValid": true,
-      "activeEnemyTypes": [],
+      "activeEnemyTypes": ["slagBlob"],
       "activeHazardTypes": ["heatVent", "pistonCrusher"],
       "activeGimmicks": ["heatVent", "pistonCrusher"],
-      "structuralElementName": "multiFloorRoom",
-      "segmentLengthPx": 320
+      "structuralElementName": "multiFloorRoom"
     },
     {
       "id": "foundry-route-16",
       "sequenceIndex": 16,
       "worldPosition": {
-        "x": 3312,
-        "y": 3392
+        "x": 3040,
+        "y": 3248
       },
       "screenIndex": 16,
       "beatName": "remix",
@@ -1007,15 +1010,14 @@
       "activeEnemyTypes": ["emberBat"],
       "activeHazardTypes": [],
       "activeGimmicks": [],
-      "structuralElementName": null,
-      "segmentLengthPx": 320
+      "structuralElementName": null
     },
     {
       "id": "foundry-route-17",
       "sequenceIndex": 17,
       "worldPosition": {
-        "x": 2992,
-        "y": 3392
+        "x": 3360,
+        "y": 3248
       },
       "screenIndex": 17,
       "beatName": "remix",
@@ -1026,15 +1028,14 @@
       "activeEnemyTypes": ["emberBat"],
       "activeHazardTypes": ["pistonCrusher"],
       "activeGimmicks": ["pistonCrusher"],
-      "structuralElementName": null,
-      "segmentLengthPx": 320
+      "structuralElementName": null
     },
     {
       "id": "foundry-route-18",
       "sequenceIndex": 18,
       "worldPosition": {
-        "x": 2672,
-        "y": 3392
+        "x": 3680,
+        "y": 3248
       },
       "screenIndex": 18,
       "beatName": "remix",
@@ -1045,15 +1046,14 @@
       "activeEnemyTypes": ["slagBlob"],
       "activeHazardTypes": ["pistonCrusher"],
       "activeGimmicks": ["pistonCrusher"],
-      "structuralElementName": null,
-      "segmentLengthPx": 320
+      "structuralElementName": null
     },
     {
       "id": "foundry-route-19",
       "sequenceIndex": 19,
       "worldPosition": {
-        "x": 2352,
-        "y": 3584
+        "x": 3680,
+        "y": 3568
       },
       "screenIndex": 19,
       "beatName": "remix",
@@ -1064,15 +1064,14 @@
       "activeEnemyTypes": ["emberBat"],
       "activeHazardTypes": [],
       "activeGimmicks": [],
-      "structuralElementName": null,
-      "segmentLengthPx": 320
+      "structuralElementName": null
     },
     {
       "id": "foundry-route-20",
       "sequenceIndex": 20,
       "worldPosition": {
-        "x": 3216,
-        "y": 3392
+        "x": 3680,
+        "y": 3248
       },
       "screenIndex": 20,
       "beatName": "setpiece",
@@ -1083,15 +1082,14 @@
       "activeEnemyTypes": ["emberBat"],
       "activeHazardTypes": ["heatVent", "risingLava"],
       "activeGimmicks": ["heatVent", "risingLava"],
-      "structuralElementName": "risingLavaSetpiece",
-      "segmentLengthPx": 320
+      "structuralElementName": "risingLavaSetpiece"
     },
     {
       "id": "foundry-route-21",
       "sequenceIndex": 21,
       "worldPosition": {
-        "x": 3216,
-        "y": 3200
+        "x": 3680,
+        "y": 2928
       },
       "screenIndex": 21,
       "beatName": "setpiece",
@@ -1102,15 +1100,14 @@
       "activeEnemyTypes": [],
       "activeHazardTypes": ["heatVent", "risingLava"],
       "activeGimmicks": ["heatVent", "risingLava"],
-      "structuralElementName": "risingLavaSetpiece",
-      "segmentLengthPx": 320
+      "structuralElementName": "risingLavaSetpiece"
     },
     {
       "id": "foundry-route-22",
       "sequenceIndex": 22,
       "worldPosition": {
-        "x": 3216,
-        "y": 3008
+        "x": 3680,
+        "y": 2608
       },
       "screenIndex": 22,
       "beatName": "setpiece",
@@ -1121,15 +1118,14 @@
       "activeEnemyTypes": [],
       "activeHazardTypes": ["risingLava"],
       "activeGimmicks": ["risingLava"],
-      "structuralElementName": "risingLavaSetpiece",
-      "segmentLengthPx": 320
+      "structuralElementName": "risingLavaSetpiece"
     },
     {
       "id": "foundry-route-23",
       "sequenceIndex": 23,
       "worldPosition": {
-        "x": 3216,
-        "y": 3008
+        "x": 4000,
+        "y": 2608
       },
       "screenIndex": 23,
       "beatName": "setpiece",
@@ -1140,15 +1136,14 @@
       "activeEnemyTypes": [],
       "activeHazardTypes": ["risingLava"],
       "activeGimmicks": ["risingLava"],
-      "structuralElementName": "risingLavaSetpiece",
-      "segmentLengthPx": 320
+      "structuralElementName": "risingLavaSetpiece"
     },
     {
       "id": "foundry-route-24",
       "sequenceIndex": 24,
       "worldPosition": {
-        "x": 3216,
-        "y": 2816
+        "x": 4000,
+        "y": 2288
       },
       "screenIndex": 24,
       "beatName": "setpiece",
@@ -1159,15 +1154,14 @@
       "activeEnemyTypes": [],
       "activeHazardTypes": ["heatVent", "risingLava"],
       "activeGimmicks": ["heatVent", "risingLava"],
-      "structuralElementName": "risingLavaSetpiece",
-      "segmentLengthPx": 320
+      "structuralElementName": "risingLavaSetpiece"
     },
     {
       "id": "foundry-route-25",
       "sequenceIndex": 25,
       "worldPosition": {
-        "x": 3216,
-        "y": 2624
+        "x": 4000,
+        "y": 1968
       },
       "screenIndex": 25,
       "beatName": "setpiece",
@@ -1178,15 +1172,14 @@
       "activeEnemyTypes": [],
       "activeHazardTypes": ["risingLava"],
       "activeGimmicks": ["risingLava"],
-      "structuralElementName": "risingLavaSetpiece",
-      "segmentLengthPx": 320
+      "structuralElementName": "risingLavaSetpiece"
     },
     {
       "id": "foundry-route-26",
       "sequenceIndex": 26,
       "worldPosition": {
-        "x": 4512,
-        "y": 2624
+        "x": 4320,
+        "y": 1968
       },
       "screenIndex": 26,
       "beatName": "breather",
@@ -1197,15 +1190,14 @@
       "activeEnemyTypes": ["slagBlob"],
       "activeHazardTypes": [],
       "activeGimmicks": [],
-      "structuralElementName": null,
-      "segmentLengthPx": 320
+      "structuralElementName": null
     },
     {
       "id": "foundry-route-27",
       "sequenceIndex": 27,
       "worldPosition": {
-        "x": 4832,
-        "y": 2688
+        "x": 4320,
+        "y": 2288
       },
       "screenIndex": 27,
       "beatName": "breather",
@@ -1216,15 +1208,14 @@
       "activeEnemyTypes": [],
       "activeHazardTypes": [],
       "activeGimmicks": [],
-      "structuralElementName": null,
-      "segmentLengthPx": 320
+      "structuralElementName": null
     },
     {
       "id": "foundry-route-28",
       "sequenceIndex": 28,
       "worldPosition": {
-        "x": 5152,
-        "y": 2688
+        "x": 4640,
+        "y": 2288
       },
       "screenIndex": 28,
       "beatName": "breather",
@@ -1235,15 +1226,14 @@
       "activeEnemyTypes": ["slagBlob"],
       "activeHazardTypes": [],
       "activeGimmicks": [],
-      "structuralElementName": null,
-      "segmentLengthPx": 320
+      "structuralElementName": null
     },
     {
       "id": "foundry-route-29",
       "sequenceIndex": 29,
       "worldPosition": {
-        "x": 4256,
-        "y": 2880
+        "x": 4640,
+        "y": 2608
       },
       "screenIndex": 29,
       "beatName": "finalExam",
@@ -1254,15 +1244,14 @@
       "activeEnemyTypes": ["emberBat"],
       "activeHazardTypes": ["heatVent"],
       "activeGimmicks": ["heatVent"],
-      "structuralElementName": "controlledDescent",
-      "segmentLengthPx": 320
+      "structuralElementName": "controlledDescent"
     },
     {
       "id": "foundry-route-30",
       "sequenceIndex": 30,
       "worldPosition": {
-        "x": 4576,
-        "y": 3072
+        "x": 4640,
+        "y": 2928
       },
       "screenIndex": 30,
       "beatName": "finalExam",
@@ -1273,15 +1262,14 @@
       "activeEnemyTypes": [],
       "activeHazardTypes": ["heatVent"],
       "activeGimmicks": ["heatVent"],
-      "structuralElementName": "controlledDescent",
-      "segmentLengthPx": 320
+      "structuralElementName": "controlledDescent"
     },
     {
       "id": "foundry-route-31",
       "sequenceIndex": 31,
       "worldPosition": {
-        "x": 4896,
-        "y": 3072
+        "x": 4960,
+        "y": 2928
       },
       "screenIndex": 31,
       "beatName": "finalExam",
@@ -1292,15 +1280,14 @@
       "activeEnemyTypes": ["slagBlob", "emberBat"],
       "activeHazardTypes": [],
       "activeGimmicks": [],
-      "structuralElementName": null,
-      "segmentLengthPx": 320
+      "structuralElementName": null
     },
     {
       "id": "foundry-route-32",
       "sequenceIndex": 32,
       "worldPosition": {
-        "x": 5216,
-        "y": 2880
+        "x": 4960,
+        "y": 2608
       },
       "screenIndex": 32,
       "beatName": "finalExam",
@@ -1311,15 +1298,14 @@
       "activeEnemyTypes": [],
       "activeHazardTypes": ["heatVent"],
       "activeGimmicks": ["heatVent"],
-      "structuralElementName": null,
-      "segmentLengthPx": 320
+      "structuralElementName": null
     },
     {
       "id": "foundry-route-33",
       "sequenceIndex": 33,
       "worldPosition": {
-        "x": 5536,
-        "y": 2880
+        "x": 5280,
+        "y": 2608
       },
       "screenIndex": 33,
       "beatName": "finalExam",
@@ -1330,15 +1316,14 @@
       "activeEnemyTypes": ["emberBat"],
       "activeHazardTypes": ["pistonCrusher"],
       "activeGimmicks": ["pistonCrusher"],
-      "structuralElementName": null,
-      "segmentLengthPx": 320
+      "structuralElementName": null
     },
     {
       "id": "foundry-route-34",
       "sequenceIndex": 34,
       "worldPosition": {
-        "x": 4992,
-        "y": 2944
+        "x": 5280,
+        "y": 2928
       },
       "screenIndex": 34,
       "beatName": "preboss",
@@ -1349,15 +1334,14 @@
       "activeEnemyTypes": [],
       "activeHazardTypes": [],
       "activeGimmicks": [],
-      "structuralElementName": null,
-      "segmentLengthPx": 320
+      "structuralElementName": null
     },
     {
       "id": "foundry-route-35",
       "sequenceIndex": 35,
       "worldPosition": {
-        "x": 5312,
-        "y": 2944
+        "x": 5600,
+        "y": 2928
       },
       "screenIndex": 35,
       "beatName": "preboss",
@@ -1368,8 +1352,7 @@
       "activeEnemyTypes": [],
       "activeHazardTypes": [],
       "activeGimmicks": [],
-      "structuralElementName": null,
-      "segmentLengthPx": 320
+      "structuralElementName": null
     }
   ]
 }

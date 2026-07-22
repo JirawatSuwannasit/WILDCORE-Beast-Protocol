@@ -1,6 +1,23 @@
 import fs from 'node:fs';
 
 const data = JSON.parse(fs.readFileSync('src/data/stages/foundry-verification.json', 'utf8'));
+const map = JSON.parse(fs.readFileSync('src/data/stages/foundry.json', 'utf8'));
+const objectLayers = Object.fromEntries(
+  map.layers
+    .filter((layer) => layer.type === 'objectgroup')
+    .map((layer) => [layer.name, layer.objects]),
+);
+const entities = objectLayers.entities ?? [];
+const checkpoints = objectLayers.checkpoints ?? [];
+const routeMarkers = objectLayers.routeMarkers ?? [];
+const sections = objectLayers.sections ?? [];
+const center = (object) => ({ x: object.x + object.width / 2, y: object.y + object.height / 2 });
+const property = (object, name) => object.properties?.find((item) => item.name === name)?.value;
+const routeNodeObjects = routeMarkers
+  .filter((object) => object.type === 'routeNode')
+  .sort((a, b) => property(a, 'sequenceIndex') - property(b, 'sequenceIndex'));
+const nodeDistance = (a, b) =>
+  Math.abs(center(a).x - center(b).x) + Math.abs(center(a).y - center(b).y);
 const isVertical = (direction) => ['U', 'D', 'UP', 'DOWN'].includes(direction);
 const changes = (directions) =>
   directions.slice(1).filter((direction, i) => direction !== directions[i]).length;
@@ -16,7 +33,9 @@ const longestRun = (directions) => {
 
 const screenDirections = data.screens.map((screen) => screen.movement);
 const totalScreens = data.mainRouteScreenIds.length;
-const traversalPixels = data.routeNodes.reduce((sum, node) => sum + node.segmentLengthPx, 0);
+const traversalPixels = routeNodeObjects
+  .slice(1)
+  .reduce((sum, node, i) => sum + nodeDistance(routeNodeObjects[i], node), 0);
 const verticalScreens = screenDirections.filter(isVertical).length;
 const encounters = data.screens.reduce((sum, screen) => sum + screen.encounters.length, 0);
 let nearFlatRun = 0;
@@ -32,6 +51,40 @@ const assert = (condition, message) => {
   if (!condition) failures.push(message);
 };
 
+assert(map.width === 368 && map.height === 285, 'map dimensions changed unexpectedly');
+assert(
+  entities.some((object) => object.type === 'playerSpawn'),
+  'player spawn missing',
+);
+assert(
+  entities.some((object) => object.type === 'bossDoor'),
+  'boss door missing',
+);
+assert(
+  sections.some((object) => object.name === 'finalExam'),
+  'finalExam section missing',
+);
+assert(
+  routeMarkers.some((object) => object.type === 'bossEntry'),
+  'bossEntry marker missing',
+);
+assert(routeNodeObjects.length === data.routeNodes.length, 'map routeNode count mismatch');
+for (const [i, object] of routeNodeObjects.entries()) {
+  const claimed = data.routeNodes[i];
+  assert(Boolean(claimed), `metadata route node missing for map route index ${i}`);
+  if (claimed) {
+    const c = center(object);
+    assert(claimed.id === object.name, `route marker name mismatch at index ${i}`);
+    assert(
+      claimed.worldPosition.x === c.x && claimed.worldPosition.y === c.y,
+      `metadata/map position mismatch for ${object.name}`,
+    );
+    assert(
+      claimed.sequenceIndex === property(object, 'sequenceIndex'),
+      `sequence property mismatch for ${object.name}`,
+    );
+  }
+}
 assert(data.dominantAxis === 'vertical', 'dominant axis must be vertical');
 assert(
   totalScreens >= data.targetTraversalScreens.min &&
@@ -53,10 +106,11 @@ assert(
   'same-direction run exceeds target',
 );
 assert(longestNearFlatRun <= 3, 'near-flat run exceeds target');
-assert(data.routeNodes.length === data.mainRouteScreenIds.length, 'route node count mismatch');
+assert(data.routeNodes.length === data.mainRouteScreenIds.length + 1, 'route node count mismatch');
 assert(
   data.routeNodes.every(
-    (node, i) => node.sequenceIndex === i + 1 && node.screenIndex === data.mainRouteScreenIds[i],
+    (node, i) =>
+      node.sequenceIndex === i && (i === 0 || node.screenIndex === data.mainRouteScreenIds[i - 1]),
   ),
   'route node ordering mismatch',
 );
@@ -88,13 +142,38 @@ assert(
   totalScreens / encounters >= 1.5 && totalScreens / encounters <= 2,
   'encounter density outside target',
 );
-assert(
-  data.screens.reduce((sum, screen) => sum + screen.pickups.length, 0) >= 8,
-  'pickup count below target',
-);
+const metadataPickupCount = data.screens.reduce((sum, screen) => sum + screen.pickups.length, 0);
+assert(metadataPickupCount >= 8, 'pickup count below target');
+assert(metadataPickupCount <= 12, 'pickup count above target');
 assert(maxGap <= 3, 'mandatory gap exceeds base kit');
-assert(data.checkpoints.length === 4, 'checkpoint count invalid');
+assert(checkpoints.length === 4 && data.checkpoints.length === 4, 'checkpoint count invalid');
+for (const checkpoint of data.checkpoints) {
+  assert(
+    checkpoints.some(
+      (object) => object.name === checkpoint.id && property(object, 'order') === checkpoint.order,
+    ),
+    `checkpoint mismatch: ${checkpoint.id}`,
+  );
+}
+const pickupObjects = entities.filter((object) =>
+  ['energyPickup', 'heartChip', 'cellPack'].includes(object.type),
+);
+assert(
+  pickupObjects.length === data.screens.reduce((sum, screen) => sum + screen.pickups.length, 0),
+  'pickup metadata/map count mismatch',
+);
 
+console.log(
+  'Pickup objects:',
+  pickupObjects.map((object) => `${object.id}:${object.name}:${object.type}`).join(', '),
+);
+console.log(
+  'Hazard introductions:',
+  data.hazardIntroductions
+    .map((intro) => `${intro.hazard}@screen${intro.screen}/${intro.beat}`)
+    .join(', '),
+);
+console.log('Traversal metric: Manhattan polyline distance over ordered Tiled routeNode markers');
 const rows = [
   ['metric', 'value', 'target'],
   ['dominantAxis', data.dominantAxis, 'vertical'],
@@ -109,11 +188,7 @@ const rows = [
   ['screenLongestRun', String(longestRun(screenDirections)), '<=3'],
   ['nearFlatRun', String(longestNearFlatRun), '<=3'],
   ['encounterDensity', (totalScreens / encounters).toFixed(2), '1.5-2'],
-  [
-    'pickupCount',
-    String(data.screens.reduce((sum, screen) => sum + screen.pickups.length, 0)),
-    '8-12',
-  ],
+  ['pickupCount', String(metadataPickupCount), '8-12'],
   ['maxGapTiles', String(maxGap), '<=3'],
 ];
 console.table(rows.slice(1).map(([metric, value, target]) => ({ metric, value, target })));

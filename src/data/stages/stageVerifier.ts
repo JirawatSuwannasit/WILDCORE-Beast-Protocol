@@ -26,7 +26,6 @@ export interface StageRouteNode {
   activeHazardTypes: string[];
   activeGimmicks: string[];
   structuralElementName: string | null;
-  segmentLengthPx: number;
 }
 
 export interface StageVerificationData {
@@ -143,7 +142,15 @@ export function calculateStageVerificationMetrics(
 
   return {
     totalScreens: data.mainRouteScreenIds.length,
-    traversalPixels: data.routeNodes.reduce((sum, node) => sum + node.segmentLengthPx, 0),
+    traversalPixels: data.routeNodes.slice(1).reduce((sum, node, i) => {
+      const previous = data.routeNodes[i];
+      if (!previous) return sum;
+      return (
+        sum +
+        Math.abs(node.worldPosition.x - previous.worldPosition.x) +
+        Math.abs(node.worldPosition.y - previous.worldPosition.y)
+      );
+    }, 0),
     verticalScreens,
     verticalPathPct: (verticalScreens / data.mainRouteScreenIds.length) * 100,
     macroDirectionChanges: countChanges(data.macroBeatDirections),
@@ -160,11 +167,12 @@ export function calculateStageVerificationMetrics(
 export function verifyFoundryStage(data: StageVerificationData): StageVerificationMetrics {
   const metrics = calculateStageVerificationMetrics(data);
   const expectedRoute = data.mainRouteScreenIds;
-  if (data.routeNodes.length !== expectedRoute.length) throw new Error('route node count mismatch');
+  if (data.routeNodes.length !== expectedRoute.length + 1)
+    throw new Error('route node count mismatch');
   for (const [i, node] of data.routeNodes.entries()) {
-    if (node.sequenceIndex !== i + 1 || node.screenIndex !== expectedRoute[i]) {
+    if (node.sequenceIndex !== i) throw new Error('route node ordering mismatch');
+    if (i > 0 && node.screenIndex !== expectedRoute[i - 1])
       throw new Error('route node ordering mismatch');
-    }
     if (!node.baseKitTraversalValid) throw new Error(`route node ${node.id} is not base-kit valid`);
   }
   if (data.dominantAxis !== 'vertical') throw new Error('Foundry must declare vertical axis');

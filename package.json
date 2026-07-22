@@ -19,7 +19,8 @@
     "cap:sync": "vite build && npx cap sync android",
     "cap:sync:debug": "vite build --mode debug && npx cap sync android",
     "android:open": "npx cap open android",
-    "verify:foundry": "node scripts/verify-foundry-stage.mjs"
+    "verify:foundry": "node scripts/verify-foundry-stage.mjs",
+    "review:m4.2": "node scripts/review-m4.2.mjs"
   },
   "dependencies": {
     "@capacitor/android": "6.2.1",
