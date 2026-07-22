@@ -23,6 +23,7 @@
 // gimmick-usage/placement/fairness are all re-verified mechanically below,
 // not just asserted.
 
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 
 const TILE = 16;
@@ -1682,5 +1683,15 @@ console.log(`DESCENT (lava-fall, heat-vent slowfall): screens 29-30`);
 console.log(`BRANCH & REJOIN: screens ${branchRange.start}-${branchRange.end}`);
 
 const outPath = process.argv[2] || 'foundry.json';
-fs.writeFileSync(outPath, JSON.stringify(map));
+fs.writeFileSync(outPath, `${JSON.stringify(map, null, 2)}\n`);
+const prettierResult = spawnSync('npx', ['prettier', '--write', outPath], {
+  encoding: 'utf8',
+  stdio: 'pipe',
+});
+if (prettierResult.status !== 0) {
+  process.stderr.write(prettierResult.stderr);
+  process.stdout.write(prettierResult.stdout);
+  throw new Error(`Prettier failed while formatting ${outPath}`);
+}
+console.log(prettierResult.stdout.trim());
 console.log('Wrote', outPath, `(${fs.statSync(outPath).size} bytes)`);

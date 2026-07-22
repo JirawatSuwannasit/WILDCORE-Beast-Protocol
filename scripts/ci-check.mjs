@@ -2,9 +2,13 @@ import { spawnSync } from 'node:child_process';
 
 const commands = [
   ['npm', ['ci']],
+  ['npm', ['run', 'verify:foundry']],
   ['npm', ['run', 'typecheck']],
   ['npm', ['run', 'lint']],
   ['npm', ['run', 'format:check']],
+  ['node', ['scripts/generate-foundry-map.mjs', 'src/data/stages/foundry.json']],
+  ['npm', ['run', 'format:check']],
+  ['git', ['diff', '--exit-code', 'src/data/stages/foundry.json']],
   ['npm', ['run', 'test']],
   ['npm', ['run', 'build']],
 ];
