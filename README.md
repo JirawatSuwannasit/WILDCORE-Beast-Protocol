@@ -52,6 +52,11 @@ adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 Or drag the APK onto an emulator window, or open the `android/` folder in Android Studio and hit
 Run.
 
+
+## Contributing
+
+This repo uses a zero-dependency Git pre-commit hook in `.githooks/pre-commit`. `npm install` / `npm ci` runs `npm run hooks:install`, which points Git at `.githooks` with `git config core.hooksPath .githooks`. The hook formats staged `*.ts`, `*.tsx`, `*.js`, `*.json`, and `*.md` files with the already-installed local Prettier via `npx --no-install prettier --write`, then re-stages them. If Prettier is unavailable, the hook prints a warning and exits successfully so commits are never blocked by a missing tool.
+
 ## Project structure
 
 ```
