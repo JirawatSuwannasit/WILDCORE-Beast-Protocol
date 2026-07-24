@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-argument */
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const mapPath = 'src/data/stages/ember.json';
@@ -9,6 +11,14 @@ const loadVerifier = async () => {
   return import('../../scripts/verify-ember-terrain.mjs');
 };
 const cloneMap = () => JSON.parse(fs.readFileSync(mapPath, 'utf8'));
+const withTempMapOutput = (prefix: string, test: (outputPath: string) => void) => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  try {
+    test(path.join(tempDir, 'ember.json'));
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+};
 const ground = (map: { layers: Array<{ name: string; data?: number[] }> }) =>
   map.layers.find((layer) => layer.name === 'ground')?.data ?? [];
 const setTile = (
@@ -21,11 +31,17 @@ const setTile = (
 };
 
 describe('Ember terrain verifier', () => {
-  it('regenerates deterministically', () => {
-    const before = fs.readFileSync(mapPath, 'utf8');
-    execFileSync('node', ['scripts/generate-ember-map.mjs'], { stdio: 'pipe' });
-    const after = fs.readFileSync(mapPath, 'utf8');
-    expect(after).toBe(before);
+  it('regenerates deterministically without touching the committed map', () => {
+    const committedBefore = fs.readFileSync(mapPath, 'utf8');
+
+    withTempMapOutput('ember-terrain-', (outputPath) => {
+      execFileSync('node', ['scripts/generate-ember-map.mjs', '--output', outputPath], {
+        stdio: 'pipe',
+      });
+      expect(fs.readFileSync(outputPath, 'utf8')).toBe(committedBefore);
+    });
+
+    expect(fs.readFileSync(mapPath, 'utf8')).toBe(committedBefore);
   });
 
   it('detects a pickup-independent solid blockage on the main route', async () => {

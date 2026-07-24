@@ -1,5 +1,15 @@
 import fs from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import path from 'node:path';
+import prettier from 'prettier';
+
+function outputPathFromArgs(argv) {
+  const flagIndex = argv.indexOf('--output');
+  if (flagIndex === -1) return 'src/data/stages/ember.json';
+  const value = argv[flagIndex + 1];
+  if (!value) throw new Error('generate-ember-map: --output requires a path');
+  return value;
+}
+const outputPath = outputPathFromArgs(process.argv.slice(2));
 
 const TILE = 16;
 const SCREEN_COLS = 20;
@@ -199,11 +209,45 @@ for (const [k, g] of cells) {
 }
 const px = (col) => col * TILE;
 const py = (row) => row * TILE;
+
+const blob = (name, col, floorRow) => obj('slagBlob', name, px(col), py(floorRow - 2));
+const bat = (name, col, row) => obj('emberBat', name, px(col), py(row));
+const encounterPlacements = [
+  // Beat 1: intro strip, single easy read.
+  blob('enc-b1-blob-intro', 21, 112),
+  // Beat 2: heat-vent tutorial after the first safe vent read.
+  bat('enc-b2-bat-vent-perch', 86, 78),
+  blob('enc-b2-blob-rail-approach', 128, 82),
+  bat('enc-b2-bat-high-ledge', 151, 66),
+  // Beat 3: escalation, including one blob+bat combination.
+  blob('enc-b3-blob-vent-combo', 169, 74),
+  bat('enc-b3-bat-vent-combo', 174, 61),
+  blob('enc-b3-blob-crusher-read', 190, 78),
+  bat('enc-b3-bat-safe-landing-check', 235, 66),
+  // Beat 5: branch/remix, different upper/lower signatures.
+  blob('enc-b5-upper-blob-crusher', 258, 73),
+  bat('enc-b5-upper-bat-catwalk', 270, 61),
+  blob('enc-b5-lower-blob-pipe', 306, 86),
+  bat('enc-b5-rejoin-bat', 338, 68),
+  // Beat 6: light upward movement pressure only.
+  bat('enc-b6-bat-lava-updraft-a', 384, 45),
+  bat('enc-b6-bat-lava-updraft-b', 438, 14),
+  // Beat 7: optional calm-side encounter.
+  blob('enc-b7-optional-secret-blob', 546, 43),
+  // Beat 8: four final-exam encounters, max two attackers per screen.
+  blob('enc-b8-blob-floor-choice-a', 568, 42),
+  bat('enc-b8-bat-layer-choice-a', 579, 20),
+  blob('enc-b8-blob-piston-layer-b', 590, 43),
+  bat('enc-b8-bat-piston-layer-c', 617, 18),
+  // Beat 9: one simple pre-boss guard, kept away from boss boundary.
+  blob('enc-b9-simple-preboss-blob', 660, 30),
+];
 const entities = [
   obj('playerSpawn', 'playerSpawn', px(2), py(110)),
-  obj('slagBlob', 'blob-intro', px(21), py(110)),
+  ...encounterPlacements,
   obj('heatVent', 'vent-chimney-a', px(62), py(94), 48, 160),
   obj('ascentShaftZone', 'forge-chimney-camera', px(70), py(88), 260, 520),
+  obj('heatVent', 'vent-escalation-continuity', px(172), py(72), 48, 128),
   obj('pistonCrusher', 'crusher-rail-a', px(150), py(66), 32, 80, [prop('phase', 'int', 0)]),
   obj('pistonCrusher', 'crusher-upper-risk', px(258), py(62), 32, 84, [prop('phase', 'int', 60)]),
   obj('slagGolemSpawn', 'slag-golem', px(210), py(74)),
@@ -213,6 +257,9 @@ const entities = [
     prop('ceilingRow', 'int', 4),
   ]),
   obj('heatVent', 'slowfall-lavafall', px(505), py(36), 64, 360, [prop('slowfall', 'bool', true)]),
+  obj('pistonCrusher', 'crusher-final-exam-continuity', px(602), py(28), 32, 84, [
+    prop('phase', 'int', 30),
+  ]),
   obj('heartChip', 'heart-chip-crusher-secret', px(548), py(30)),
   obj('cellPack', 'cell-pack-above-lava', px(455), py(10)),
   obj('bossDoor', 'bossDoor', px(684), py(20), 16, 64),
@@ -325,9 +372,13 @@ const map = {
   type: 'map',
   version: '1.10',
 };
-fs.writeFileSync('src/data/stages/ember.json', `${JSON.stringify(map, null, 2)}\n`);
-execFileSync(
-  process.platform === 'win32' ? 'npx.cmd' : 'npx',
-  ['prettier', '--write', 'src/data/stages/ember.json'],
-  { stdio: 'inherit' },
-);
+const prettierReferencePath = path.join(process.cwd(), 'src/data/stages/ember.json');
+const prettierConfig = (await prettier.resolveConfig(prettierReferencePath)) ?? {};
+const formattedMap = await prettier.format(JSON.stringify(map, null, 2), {
+  ...prettierConfig,
+  filepath: prettierReferencePath,
+  parser: 'json',
+});
+
+fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+fs.writeFileSync(outputPath, formattedMap);

@@ -21,7 +21,8 @@
     "android:open": "npx cap open android",
     "hooks:install": "git config core.hooksPath .githooks",
     "postinstall": "npm run hooks:install",
-    "verify:ember-terrain": "node scripts/verify-ember-terrain.mjs"
+    "verify:ember-terrain": "node scripts/verify-ember-terrain.mjs",
+    "verify:ember-encounters": "node scripts/verify-ember-encounters.mjs"
   },
   "dependencies": {
     "@capacitor/android": "6.2.1",
