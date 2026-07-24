@@ -1,205 +1,250 @@
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
-const TILE = 16,
-  H = 20,
-  V = 12,
-  TOP = 2,
-  FILL = 1;
-let id = 1;
-const next = () => id++;
-const PLAN = [
-  'R',
-  'R',
-  'U',
-  'R',
-  'U',
-  'U',
-  'R',
-  'R',
-  'U',
-  'R',
-  'R',
-  'U',
-  'R',
-  'R',
-  'D',
-  'R',
-  'R',
-  'U',
-  'U',
-  'R',
-  'U',
-  'U',
-  'U',
-  'R',
-  'D',
-  'D',
-  'R',
-  'R',
-  'U',
-  'R',
-  'R',
-  'U',
-  'D',
-  'R',
-];
-const beats = [3, 5, 5, 1, 5, 5, 3, 5, 2];
-function stats(seq) {
-  let v = seq.filter((x) => x != 'R').length,
-    run = 1,
-    max = 1,
-    ch = 0;
-  for (let i = 1; i < seq.length; i++) {
-    if (seq[i] == seq[i - 1]) {
-      run++;
-      max = Math.max(max, run);
-    } else {
-      run = 1;
-      ch++;
-    }
-  }
-  return {
-    total: seq.length,
-    vertical: v,
-    verticalPct: +((v / seq.length) * 100).toFixed(1),
-    maxRun: max,
-    changes: ch,
-  };
-}
-console.log('Ember Foundry route stats', stats(PLAN));
+
+const TILE = 16;
+const SCREEN_COLS = 20;
+const SCREENS = 34;
+const WIDTH = 730;
+const HEIGHT = 150;
+const EMPTY = 0;
+const FILL = 1;
+const TOP = 2;
+let objectId = 1;
+const nextId = () => objectId++;
 const cells = new Map();
-const set = (c, r, g) => cells.set(`${r},${c}`, g);
+const key = (c, r) => `${r},${c}`;
+const setTile = (c, r, gid) => {
+  if (c >= 0 && c < WIDTH && r >= 0 && r < HEIGHT) cells.set(key(c, r), gid);
+};
+const isSolid = (c, r) => cells.has(key(c, r));
 function floor(c0, c1, r, d = 8) {
   for (let c = c0; c < c1; c++) {
-    set(c, r, TOP);
-    for (let k = 1; k <= d; k++) set(c, r + k, FILL);
+    setTile(c, r, TOP);
+    for (let k = 1; k <= d; k++) setTile(c, r + k, FILL);
   }
 }
 function wall(c0, c1, r0, r1) {
-  for (let c = c0; c < c1; c++) for (let r = r0; r <= r1; r++) set(c, r, FILL);
+  for (let c = c0; c < c1; c++) for (let r = r0; r <= r1; r++) setTile(c, r, FILL);
 }
-let cur = { c: 0, r: 112 };
-const segs = [];
-const surface = [];
-function addSeg(dir) {
-  const s = { dir, c0: cur.c, r0: cur.r };
-  if (dir === 'R') {
-    floor(cur.c, cur.c + H, cur.r);
-    cur.c += H;
-  }
-  if (dir === 'U') {
-    wall(cur.c, cur.c + 2, cur.r - V, cur.r + 8);
-    wall(cur.c + 10, cur.c + 12, cur.r - V, cur.r + 8);
-    floor(cur.c + 2, cur.c + 5, cur.r - 4, 3);
-    floor(cur.c + 7, cur.c + 10, cur.r - 8, 3);
-    floor(cur.c + 2, cur.c + 12, cur.r - V);
-    cur.r -= V;
-    cur.c += 12;
-  }
-  if (dir === 'D') {
-    floor(cur.c, cur.c + 6, cur.r + 4, 3);
-    floor(cur.c + 8, cur.c + 12, cur.r + 8, 3);
-    floor(cur.c + 12, cur.c + 20, cur.r + V);
-    cur.r += V;
-    cur.c += 20;
-  }
-  s.c1 = cur.c;
-  s.r1 = cur.r;
-  segs.push(s);
-  surface.push(cur.r);
+function ledge(c0, c1, r) {
+  floor(c0, c1, r, 3);
 }
-PLAN.forEach(addSeg);
-floor(cur.c, cur.c + 25, cur.r);
-const width = cur.c + 25,
-  height = 150;
-const data = Array(width * height).fill(0);
-for (const [key, g] of cells) {
-  const [r, c] = key.split(',').map(Number);
-  if (r >= 0 && r < height && c >= 0 && c < width) data[r * width + c] = g;
+function rail(c0, c1, r) {
+  floor(c0, c1, r, 2);
+}
+function obj(type, name, x, y, width = 16, height = 16, properties = []) {
+  return { id: nextId(), type, name, x, y, width, height, visible: true, properties };
 }
 const prop = (name, type, value) => ({ name, type, value });
-const obj = (type, name, x, y, w = 16, h = 16, properties = []) => ({
-  id: next(),
-  type,
-  name,
-  x,
-  y,
-  width: w,
-  height: h,
-  visible: true,
-  properties,
-});
-const cx = (i) => segs[i].c0 * TILE + 24,
-  cy = (i) => segs[i].r0 * TILE - 20;
+
+// 34 measured traversal screens. Direction changes and vertical% are verified from row deltas.
+const surfaceRows = [
+  112, 112, 104, 96, 88, 80, 80, 76, 72, 76, 76, 76, 76, 72, 68, 72, 76, 76, 64, 52, 40, 28, 16, 16,
+  28, 40, 40, 40, 32, 32, 32, 24, 28, 28,
+];
+const motifs = [
+  'village',
+  'village',
+  'chimney',
+  'chimney',
+  'chimney',
+  'chimney',
+  'rail',
+  'rail',
+  'rail',
+  'rail',
+  'midboss',
+  'fork',
+  'upperCatwalk',
+  'upperCatwalk',
+  'branchMix',
+  'lowerPipe',
+  'rejoin',
+  'remix',
+  'lavaShaft',
+  'lavaShaft',
+  'lavaShaft',
+  'lavaShaft',
+  'lavaShaft',
+  'lavaTop',
+  'lavafall',
+  'lavafall',
+  'breather',
+  'secret',
+  'forgeHall',
+  'forgeHall',
+  'forgeHall',
+  'forgeHall',
+  'preboss',
+  'preboss',
+];
+
+function buildVillage(s) {
+  const x = s * SCREEN_COLS,
+    r = surfaceRows[s];
+  floor(x, x + 18, r);
+  ledge(x + 8, x + 13, r - 4);
+}
+function buildChimney(s) {
+  const x = s * SCREEN_COLS,
+    r = surfaceRows[s];
+  wall(x, x + 2, r - 14, r + 8);
+  wall(x + 17, x + 19, r - 14, r + 8);
+  ledge(x + 3, x + 8, r);
+  ledge(x + 12, x + 17, r - 4);
+  ledge(x + 5, x + 11, r - 8);
+  ledge(x + 13, x + 18, r - 12);
+}
+function buildRail(s) {
+  const x = s * SCREEN_COLS,
+    r = surfaceRows[s];
+  floor(x, x + 20, r);
+  rail(x + 2, x + 7, r - 6);
+  rail(x + 11, x + 17, r - 10);
+  wall(x + 9, x + 10, r - 11, r - 3);
+}
+function buildMidboss(s) {
+  const x = s * SCREEN_COLS,
+    r = surfaceRows[s];
+  floor(x, x + 20, r);
+  wall(x, x + 1, r - 9, r + 8);
+  wall(x + 19, x + 20, r - 9, r + 8);
+}
+function buildBranch(s) {
+  const x = s * SCREEN_COLS; // actual two independent tile paths between fork and rejoin
+  // Upper fast/risky catwalks: narrow, elevated, staggered.
+  ledge(x, x + 5, 76);
+  ledge(x + 5, x + 10, 72);
+  ledge(x + 10, x + 14, 68);
+  ledge(x + 14, x + 20, 72);
+  // Lower pipe route: wider, slower, extra movement step down and up.
+  floor(x, x + 6, 84);
+  floor(x + 6, x + 11, 88);
+  floor(x + 11, x + 16, 84);
+  floor(x + 16, x + 20, 80);
+  wall(x + 2, x + 3, 85, 92);
+  wall(x + 17, x + 18, 81, 88);
+}
+function buildRejoin(s) {
+  const x = s * SCREEN_COLS;
+  floor(x, x + 20, 76);
+  ledge(x + 4, x + 10, 68);
+  ledge(x + 12, x + 18, 84);
+}
+function buildLavaShaft(s, i) {
+  const x = s * SCREEN_COLS,
+    r = surfaceRows[s];
+  wall(x, x + 2, r - 8, r + 16);
+  wall(x + 18, x + 20, r - 8, r + 16);
+  ledge(x + 2, x + 18, r);
+  if (i % 2 === 0) {
+    ledge(x + 3, x + 8, r - 3);
+    ledge(x + 12, x + 17, r - 7);
+    ledge(x + 6, x + 11, r - 14);
+  } else {
+    ledge(x + 12, x + 17, r - 3);
+    ledge(x + 4, x + 9, r - 6);
+    ledge(x + 10, x + 16, r - 12);
+  }
+}
+function buildLavafall(s) {
+  const x = s * SCREEN_COLS,
+    r = surfaceRows[s];
+  ledge(x, x + 7, r);
+  ledge(x + 9, x + 15, r + 5);
+  ledge(x + 3, x + 9, r + 10);
+  ledge(x + 13, x + 20, r + 15);
+  wall(x + 19, x + 20, r - 5, r + 18);
+}
+function buildForgeHall(s) {
+  const x = s * SCREEN_COLS,
+    r = surfaceRows[s];
+  floor(x, x + 20, r + 10);
+  ledge(x, x + 8, r);
+  ledge(x + 11, x + 20, r);
+  ledge(x + 2, x + 10, r - 8);
+  ledge(x + 12, x + 18, r - 8);
+  ledge(x + 5, x + 15, r - 16);
+  wall(x + 9, x + 10, r - 15, r + 9);
+}
+function buildPreboss(s) {
+  const x = s * SCREEN_COLS,
+    r = surfaceRows[s];
+  floor(x, x + 20, r);
+  ledge(x + 6, x + 11, r - 5);
+}
+for (let s = 0; s < SCREENS; s++) {
+  const m = motifs[s];
+  if (m === 'village') buildVillage(s);
+  else if (m === 'chimney') buildChimney(s);
+  else if (m === 'rail' || m === 'remix') buildRail(s);
+  else if (m === 'midboss') buildMidboss(s);
+  else if (['fork', 'upperCatwalk', 'branchMix', 'lowerPipe'].includes(m)) buildBranch(s);
+  else if (m === 'rejoin') buildRejoin(s);
+  else if (m === 'lavaShaft' || m === 'lavaTop') buildLavaShaft(s, s - 18);
+  else if (m === 'lavafall' || m === 'breather' || m === 'secret') buildLavafall(s);
+  else if (m === 'forgeHall') buildForgeHall(s);
+  else buildPreboss(s);
+}
+floor(SCREENS * SCREEN_COLS, SCREENS * SCREEN_COLS + 18, surfaceRows[SCREENS - 1]);
+// Solid outer boundaries / intentional dead ends.
+wall(0, 1, 0, HEIGHT - 1);
+wall(WIDTH - 1, WIDTH, 0, HEIGHT - 1);
+wall(0, WIDTH, HEIGHT - 1, HEIGHT - 1);
+
+const data = Array(WIDTH * HEIGHT).fill(EMPTY);
+for (const [k, g] of cells) {
+  const [r, c] = k.split(',').map(Number);
+  data[r * WIDTH + c] = g;
+}
+const px = (col) => col * TILE;
+const py = (row) => row * TILE;
 const entities = [
-  obj('playerSpawn', 'playerSpawn', 24, segs[0].r0 * TILE - 32),
-  obj('slagBlob', 'blob-intro', cx(1), cy(1)),
-  obj('heatVent', 'vent-tutorial', cx(2) + 40, cy(2) + 40, 48, 96),
-  obj('emberBat', 'bat-chimney', cx(4) + 60, cy(4) - 80),
-  obj('heatVent', 'vent-chimney-a', cx(5) + 45, cy(5) + 50, 52, 110),
-  obj('slagBlob', 'blob-escalation', cx(8), cy(8)),
-  obj('pistonCrusher', 'crusher-tutorial', cx(10) + 70, cy(10) - 16, 32, 72, [
-    prop('phase', 'int', 0),
+  obj('playerSpawn', 'playerSpawn', px(2), py(110)),
+  obj('slagBlob', 'blob-intro', px(21), py(110)),
+  obj('heatVent', 'vent-chimney-a', px(62), py(94), 48, 160),
+  obj('ascentShaftZone', 'forge-chimney-camera', px(70), py(88), 260, 520),
+  obj('pistonCrusher', 'crusher-rail-a', px(150), py(66), 32, 80, [prop('phase', 'int', 0)]),
+  obj('pistonCrusher', 'crusher-upper-risk', px(258), py(62), 32, 84, [prop('phase', 'int', 60)]),
+  obj('slagGolemSpawn', 'slag-golem', px(210), py(74)),
+  obj('lavaChaseTrigger', 'lava-trigger', px(366), py(58), 96, 520),
+  obj('risingLavaZone', 'rising-lava', px(400), py(94), 180, 1, [
+    prop('bottomRow', 'int', 96),
+    prop('ceilingRow', 'int', 4),
   ]),
-  obj('pistonCrusher', 'crusher-branch-a', cx(14) + 70, cy(14) - 16, 32, 72, [
-    prop('phase', 'int', 60),
-  ]),
-  obj('slagGolemSpawn', 'slag-golem', cx(13) + 120, cy(13)),
-  obj('pistonCrusher', 'crusher-upper-risk', cx(15) + 70, cy(15) - 18, 32, 80, [
-    prop('phase', 'int', 0),
-  ]),
-  obj('heatVent', 'vent-remix', cx(17) + 40, cy(17) + 50, 48, 110),
-  obj('lavaChaseTrigger', 'lava-trigger', cx(18) - 20, cy(18) - 80, 80, 180),
-  obj('risingLavaZone', 'rising-lava', cx(18) + 40, segs[22].r1 * TILE, 160, 1, [
-    prop('bottomRow', 'int', segs[22].r0 + 16),
-    prop('ceilingRow', 'int', segs[22].r1 - 4),
-  ]),
-  obj('cellPack', 'cell-pack-above-lava', cx(22) + 42, cy(22) - 72),
-  obj('heatVent', 'slowfall-lavafall', cx(24) + 50, cy(24) + 40, 56, 150, [
-    prop('slowfall', 'bool', true),
-  ]),
-  obj('heartChip', 'heart-chip-crusher-secret', cx(27) + 95, cy(27) - 44),
-  obj('pistonCrusher', 'crusher-secret', cx(27) + 65, cy(27) - 18, 32, 80, [
-    prop('phase', 'int', 60),
-  ]),
-  obj('emberBat', 'bat-final-a', cx(29) + 50, cy(29) - 80),
-  obj('pistonCrusher', 'crusher-final-a', cx(30) + 70, cy(30) - 18, 32, 80, [
-    prop('phase', 'int', 0),
-  ]),
-  obj('slagBlob', 'blob-final', cx(31) + 30, cy(31)),
-  obj('bossDoor', 'bossDoor', cur.c * TILE + 20, cur.r * TILE - 64, 16, 64),
-  obj('bossRoomTrigger', 'bossRoomTrigger', cur.c * TILE + 50, cur.r * TILE - 80, 80, 120),
-  obj('bossSpawn', 'magma-rhino', cur.c * TILE + 220, cur.r * TILE - 24),
+  obj('heatVent', 'slowfall-lavafall', px(505), py(36), 64, 360, [prop('slowfall', 'bool', true)]),
+  obj('heartChip', 'heart-chip-crusher-secret', px(548), py(30)),
+  obj('cellPack', 'cell-pack-above-lava', px(455), py(10)),
+  obj('bossDoor', 'bossDoor', px(684), py(20), 16, 64),
+  obj('bossRoomTrigger', 'bossRoomTrigger', px(688), py(18), 96, 128),
+  obj('bossSpawn', 'magma-rhino', px(704), py(26)),
 ];
 for (let i = 0; i < 10; i++)
   entities.push(
     obj(
       'energyPickup',
       `pickup-${i}`,
-      cx(Math.min(2 + i * 3, segs.length - 1)) + 40,
-      cy(Math.min(2 + i * 3, segs.length - 1)) - 20,
+      px(25 + i * 55),
+      py(Math.max(8, surfaceRows[Math.min(33, 2 + i * 3)] - 3)),
     ),
   );
 const checkpoints = [
-  obj('checkpoint', 'checkpoint-start', 24, segs[0].r0 * TILE - 32, 16, 16, [
-    prop('order', 'int', 0),
-  ]),
-  obj('checkpoint', 'checkpoint-post-midboss', cx(14), cy(14), 16, 16, [prop('order', 'int', 1)]),
-  obj('checkpoint', 'checkpoint-post-lava', cx(23), cy(23), 16, 16, [prop('order', 'int', 2)]),
-  obj('checkpoint', 'checkpoint-preboss', cur.c * TILE - 20, cur.r * TILE - 32, 16, 16, [
-    prop('order', 'int', 3),
-  ]),
+  obj('checkpoint', 'checkpoint-start', px(2), py(110), 16, 16, [prop('order', 'int', 0)]),
+  obj('checkpoint', 'checkpoint-post-midboss', px(225), py(70), 16, 16, [prop('order', 'int', 1)]),
+  obj('checkpoint', 'checkpoint-post-lava', px(470), py(14), 16, 16, [prop('order', 'int', 2)]),
+  obj('checkpoint', 'checkpoint-preboss', px(640), py(26), 16, 16, [prop('order', 'int', 3)]),
 ];
 const sections = [
-  obj('section', 'intro', 0, 0, segs[2].c1 * TILE, height * TILE),
-  obj('section', 'midBossArena', segs[13].c0 * TILE, (segs[13].r0 - 8) * TILE, 320, 220),
-  obj('section', 'lavaChaseShaft', segs[18].c0 * TILE, (segs[22].r1 - 4) * TILE, 190, 520),
-  obj('section', 'bossRoom', cur.c * TILE, (cur.r - 7) * TILE, 360, 160),
+  obj('section', 'forgeChimney', px(40), py(72), 320, 600),
+  obj('section', 'branch', px(240), py(58), 1400, 560),
+  obj('section', 'lavaChaseShaft', px(360), py(0), 220, 1100),
+  obj('section', 'forgeHall', px(560), py(0), 320, 760),
+  obj('section', 'bossRoom', px(680), py(0), 360, 160),
 ];
 const map = {
   compressionlevel: -1,
-  height,
-  width,
+  height: HEIGHT,
+  width: WIDTH,
   infinite: false,
   layers: [
     {
@@ -208,8 +253,8 @@ const map = {
       type: 'tilelayer',
       x: 0,
       y: 0,
-      width,
-      height,
+      width: WIDTH,
+      height: HEIGHT,
       data,
       opacity: 1,
       visible: true,
@@ -256,7 +301,7 @@ const map = {
     },
   ],
   nextlayerid: 6,
-  nextobjectid: id,
+  nextobjectid: objectId,
   orientation: 'orthogonal',
   renderorder: 'right-down',
   tiledversion: '1.10.2',
@@ -281,13 +326,8 @@ const map = {
   version: '1.10',
 };
 fs.writeFileSync('src/data/stages/ember.json', `${JSON.stringify(map, null, 2)}\n`);
-fs.writeFileSync(
-  'docs/ember-foundry-checklist.md',
-  `# Ember Foundry GDD §2.7 Checklist\n\nDominant axis: vertical-dominant CLIMB. Vertical path: ${stats(PLAN).verticalPct}%. Direction changes: ${stats(PLAN).changes}. Longest same-dir run: ${stats(PLAN).maxRun}. Screens: ${PLAN.length}. Per-screen surface heights (tile rows): ${surface.join(', ')}. Structural ranges: ascent shaft screens 3-6 and lava chase 19-23; controlled descent screens 25-26; multi-floor forge hall screens 29-32; branch/rejoin screens 15-18. Gimmicks: heat vents screens 3,5,6,18,25; crushers screens 11,15,16,28,31; rising lava screens 19-23. Max gap width: 3 tiles. Terrain %: vertical ${stats(PLAN).verticalPct} / horizontal ${(100 - stats(PLAN).verticalPct).toFixed(1)}.\n\nASCII route map:\n\nStart -> intro -> chimney UP -> crushers -> [upper catwalk fast+risky / lower pipes safe] -> golem -> lava chase UP -> lavafall DOWN -> forge hall UP/DOWN -> boss door -> Magma Rhino\n`,
-);
-
 execFileSync(
   process.platform === 'win32' ? 'npx.cmd' : 'npx',
-  ['prettier', '--write', 'src/data/stages/ember.json', 'docs/ember-foundry-checklist.md'],
+  ['prettier', '--write', 'src/data/stages/ember.json'],
   { stdio: 'inherit' },
 );

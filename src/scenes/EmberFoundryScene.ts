@@ -57,6 +57,11 @@ export class EmberFoundryScene extends BaseStageScene {
           getObjectProperty(o, 'ceilingRow', 0) * 16,
         ),
       ),
+    ascentShaftZone: (_s, x, y, o) => {
+      const z = this.add.zone(x, y, o.width, o.height);
+      this.physics.add.existing(z, true);
+      this.registerVerticalCameraZone(z);
+    },
     lavaChaseTrigger: (_s, x, y, o) => {
       const z = this.add.zone(x, y, o.width, o.height);
       this.physics.add.existing(z, true);
